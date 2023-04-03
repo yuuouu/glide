@@ -54,9 +54,9 @@ import java.util.concurrent.Executor;
  * 请在 Fragment 或 Activity 中使用静态 Glide.load 方法。
  *
  * @see Glide#with(android.app.Activity)
- * @see Glide#with(androidx.fragment.app.FragmentActivity)
+ * @see Glide#with(android.support.v4.app.FragmentActivity)
  * @see Glide#with(android.app.Fragment)
- * @see Glide#with(androidx.fragment.app.Fragment)
+ * @see Glide#with(android.support.v4.app.Fragment)
  * @see Glide#with(Context)
  */
 public class RequestManager implements ComponentCallbacks2, LifecycleListener, ModelTypes<RequestBuilder<Drawable>> {
@@ -233,17 +233,6 @@ public class RequestManager implements ComponentCallbacks2, LifecycleListener, M
   }
 
   /**
-   * Clear all resources when onStop() from {@link LifecycleListener} is called.
-   *
-   * @return This request manager.
-   */
-  @NonNull
-  public synchronized RequestManager clearOnStop() {
-    clearOnStop = true;
-    return this;
-  }
-
-  /**
    * 添加一个默认的 {@link RequestListener}，它将添加到此 {@link RequestManager} 启动的每个 {@link Request} 中。
    *
    * <p>可以在 {@link RequestManager} 作用域内添加单个或多个 {@link RequestListener}。
@@ -390,8 +379,7 @@ public class RequestManager implements ComponentCallbacks2, LifecycleListener, M
 
   /**
    * Lifecycle callback that unregisters for connectivity events (if the
-   * android.permission.ACCESS_NETWORK_STATE permission is present) and pauses in progress loads
-   * and clears all resources if {@link #clearOnStop()} is called.
+   * android.permission.ACCESS_NETWORK_STATE permission is present) and pauses in progress loads.
    */
   @Override
   public synchronized void onStop() {
@@ -411,7 +399,10 @@ public class RequestManager implements ComponentCallbacks2, LifecycleListener, M
   public synchronized void onDestroy() {
     Log.e("yuu ", " RequestManager onDestroy: requestTracker=" + requestTracker.hashCode());
     targetTracker.onDestroy();
-    clearRequests();
+    for (Target<?> target : targetTracker.getAll()) {
+      clear(target);
+    }
+    targetTracker.clear();
     requestTracker.clearRequests();
     lifecycle.removeListener(this);
     lifecycle.removeListener(connectivityMonitor);

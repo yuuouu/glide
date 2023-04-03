@@ -333,6 +333,7 @@ public final class GlideExecutor implements ExecutorService {
             // ignore
           }
         };
+
     /** Logs the uncaught {@link Throwable}s using {@link #TAG} and {@link Log}. */
     UncaughtThrowableStrategy LOG =
         new UncaughtThrowableStrategy() {
@@ -343,6 +344,7 @@ public final class GlideExecutor implements ExecutorService {
             }
           }
         };
+
     /** Rethrows the uncaught {@link Throwable}s to crash the app. */
     // Public API.
     @SuppressWarnings("unused")

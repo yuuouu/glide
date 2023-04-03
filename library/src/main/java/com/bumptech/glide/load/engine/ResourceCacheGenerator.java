@@ -47,6 +47,7 @@ class ResourceCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCa
   private int modelLoaderIndex;
   // 当前加载操作的数据封装体。内部包含了真正的DataFetcher，以及加载参数。
   private volatile LoadData<?> loadData;
+
   // PMD is wrong here, this File must be an instance variable because it may be used across
   // multiple calls to startNext.
   /**

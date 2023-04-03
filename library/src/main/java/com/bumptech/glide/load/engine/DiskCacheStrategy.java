@@ -117,7 +117,6 @@ public abstract class DiskCacheStrategy {
           return dataSource == DataSource.REMOTE;
         }
 
-        @SuppressWarnings("checkstyle:UnnecessaryParentheses") // Readability
         @Override
         public boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
           return ((isFromAlternateCacheKey && dataSource == DataSource.DATA_DISK_CACHE) || dataSource == DataSource.LOCAL) && encodeStrategy == EncodeStrategy.TRANSFORMED;
