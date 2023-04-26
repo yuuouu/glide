@@ -502,15 +502,11 @@ public final class GlideBuilder {
   }
 
   /**
-   * Disables hardware bitmaps if the sdk level is <= O and {@code disableHardwareBitmapsOnO} is
-   * {@code true}.
-   *
-   * @deprecated This method is experimental. It will be hard coded and removed in a future release
+   * @deprecated This method does nothing. It will be hard coded and removed in a future release
    *     without further warning.
    */
   @Deprecated
   public GlideBuilder setDisableHardwareBitmapsOnO(boolean disableHardwareBitmapsOnO) {
-    glideExperimentsBuilder.add(new DisableHardwareBitmapsOnO(disableHardwareBitmapsOnO));
     return this;
   }
 
@@ -607,14 +603,6 @@ public final class GlideBuilder {
         manifestModules,
         annotationGeneratedGlideModule,
         experiments);
-  }
-
-  static final class DisableHardwareBitmapsOnO implements Experiment {
-    final boolean disableHardwareBitmapsOnO;
-
-    DisableHardwareBitmapsOnO(boolean disableHardwareBitmapsOnO) {
-      this.disableHardwareBitmapsOnO = disableHardwareBitmapsOnO;
-    }
   }
 
   static final class ManualOverrideHardwareBitmapMaxFdCount implements Experiment {

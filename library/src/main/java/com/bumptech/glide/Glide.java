@@ -331,13 +331,6 @@ public class Glide implements ComponentCallbacks2 {
     this.connectivityMonitorFactory = connectivityMonitorFactory;
     this.defaultRequestOptionsFactory = defaultRequestOptionsFactory;
 
-    DisableHardwareBitmapsOnO disableHardwareBitmapsOnO =
-        experiments.get(DisableHardwareBitmapsOnO.class);
-    if (disableHardwareBitmapsOnO != null) {
-      HardwareConfigState.setDisableHardwareBitmapsOnO(
-          disableHardwareBitmapsOnO.disableHardwareBitmapsOnO);
-    }
-
     // This has a circular relationship with Glide and GlideContext in that it depends on both,
     // but it's created by Glide's constructor. In practice this shouldn't matter because the
     // supplier holding the registry should never be initialized before this constructor finishes.
