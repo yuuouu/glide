@@ -54,9 +54,9 @@ import java.util.concurrent.Executor;
  * 请在 Fragment 或 Activity 中使用静态 Glide.load 方法。
  *
  * @see Glide#with(android.app.Activity)
- * @see Glide#with(android.support.v4.app.FragmentActivity)
+ * @see Glide#with(androidx.fragment.app.FragmentActivity)
  * @see Glide#with(android.app.Fragment)
- * @see Glide#with(android.support.v4.app.Fragment)
+ * @see Glide#with(androidx.fragment.app.Fragment)
  * @see Glide#with(Context)
  */
 public class RequestManager implements ComponentCallbacks2, LifecycleListener, ModelTypes<RequestBuilder<Drawable>> {
