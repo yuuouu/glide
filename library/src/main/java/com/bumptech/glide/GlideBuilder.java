@@ -511,13 +511,11 @@ public final class GlideBuilder {
   }
 
   /**
-   * Fixes decoding of hardware gainmaps from Ultra HDR images on Android U.
-   *
-   * <p>Without this flag on, gainmaps may be dropped when decoding Ultra HDR on Android U devices
-   * using skiagl for hwui as described in https://github.com/bumptech/glide/issues/5362.
+   * @deprecated This method does nothing. It will be hard coded and removed in a future release
+   *     without further warning.
    */
+  @Deprecated
   public GlideBuilder setEnableHardwareGainmapFixOnU(boolean isEnabled) {
-    glideExperimentsBuilder.update(new EnableHardwareGainmapFixOnU(), isEnabled);
     return this;
   }
 
@@ -633,9 +631,6 @@ public final class GlideBuilder {
       this.fdCount = fdCount;
     }
   }
-
-  /** Fixes decoding of hardware gainmaps from Ultra HDR images on Android U. */
-  static final class EnableHardwareGainmapFixOnU implements Experiment {}
 
   static final class EnableImageDecoderForBitmaps implements Experiment {}
 
