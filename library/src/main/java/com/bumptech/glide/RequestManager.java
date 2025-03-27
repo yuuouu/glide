@@ -233,6 +233,17 @@ public class RequestManager implements ComponentCallbacks2, LifecycleListener, M
   }
 
   /**
+   * Clear all resources when onStop() from {@link LifecycleListener} is called.
+   *
+   * @return This request manager.
+   */
+  @NonNull
+  public synchronized RequestManager clearOnStop() {
+    clearOnStop = true;
+    return this;
+  }
+
+  /**
    * 添加一个默认的 {@link RequestListener}，它将添加到此 {@link RequestManager} 启动的每个 {@link Request} 中。
    *
    * <p>可以在 {@link RequestManager} 作用域内添加单个或多个 {@link RequestListener}。
@@ -399,10 +410,7 @@ public class RequestManager implements ComponentCallbacks2, LifecycleListener, M
   public synchronized void onDestroy() {
     Log.e("yuu ", " RequestManager onDestroy: requestTracker=" + requestTracker.hashCode());
     targetTracker.onDestroy();
-    for (Target<?> target : targetTracker.getAll()) {
-      clear(target);
-    }
-    targetTracker.clear();
+    clearRequests();
     requestTracker.clearRequests();
     lifecycle.removeListener(this);
     lifecycle.removeListener(connectivityMonitor);
