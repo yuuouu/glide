@@ -138,8 +138,7 @@ public class RequestManagerRetriever implements Handler.Callback {
 
   /**
    * @deprecated This is identical to calling {@link #get(Context)} with the application context.
-   *     Use androidx Activities instead (ie {@link FragmentActivity}, or {@link
-   *     androidx.appcompat.app.AppCompatActivity}).
+   * Use androidx Activities instead (ie {@link FragmentActivity}, or {@link androidx.appcompat.app.AppCompatActivity}).
    */
   @Deprecated
   @NonNull
