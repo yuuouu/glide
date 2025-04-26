@@ -148,3 +148,4 @@ dependencyResolutionManagement {
         }
     }
 }
+include ':yuu'
