@@ -18,6 +18,7 @@ import java.util.WeakHashMap;
  */
 public class RequestTracker {
   private static final String TAG = "RequestTracker";
+
   // Most requests will be for views and will therefore be held strongly (and safely) by the view
   // via the tag. However, a user can always pass in a different type of target which may end up not
   // being strongly referenced even though the user still would like the request to finish. Weak
@@ -25,16 +26,28 @@ public class RequestTracker {
   // side affects, WeakReferences are still essentially required. A user can always make repeated
   // requests into targets other than views, or use an activity manager in a fragment pager where
   // holding strong references would steadily leak bitmaps and/or views.
-  private final Set<Request> requests =
-      Collections.newSetFromMap(new WeakHashMap<Request, Boolean>());
+
+  /**
+   * 大多数请求都是针对视图的，因此视图会通过标签将其强引用（且安全地）持有。
+   * 但是，用户始终可以传入不同类型的目标，即使用户仍然希望请求完成，最终也可能不会被强引用。
+   * 因此，弱引用实际上只在视图目标的上下文中起作用。尽管存在副作用，弱引用仍然是必需的。
+   * 用户始终可以向视图以外的目标发出重复请求，或者在片段分页器中使用活动管理器，因为持有强引用会导致位图和/或视图的泄漏。
+   */
+  private final Set<Request> requests = Collections.newSetFromMap(new WeakHashMap<Request, Boolean>());
   // A set of requests that have not completed and are queued to be run again. We use this list to
   // maintain hard references to these requests to ensure that they are not garbage collected
   // before they start running or while they are paused. See #346.
+  /**
+   * 一组尚未完成且正在排队等待再次运行的请求。
+   * 我们使用此列表维护对这些请求的硬引用，以确保它们在开始运行之前或暂停期间不会被垃圾回收。请参阅 #346。
+   */
   private final Set<Request> pendingRequests = new HashSet<>();
 
   private boolean isPaused;
 
-  /** Starts tracking the given request. */
+  /**
+   * Starts tracking the given request.
+   */
   public void runRequest(@NonNull Request request) {
     requests.add(request);
     if (!isPaused) {
@@ -72,12 +85,16 @@ public class RequestTracker {
     return isOwnedByUs;
   }
 
-  /** Returns {@code true} if requests are currently paused, and {@code false} otherwise. */
+  /**
+   * Returns {@code true} if requests are currently paused, and {@code false} otherwise.
+   */
   public boolean isPaused() {
     return isPaused;
   }
 
-  /** Stops any in progress requests. */
+  /**
+   * Stops any in progress requests.
+   */
   public void pauseRequests() {
     isPaused = true;
     for (Request request : Util.getSnapshot(requests)) {
@@ -91,7 +108,9 @@ public class RequestTracker {
     }
   }
 
-  /** Stops any in progress requests and releases bitmaps associated with completed requests. */
+  /**
+   * Stops any in progress requests and releases bitmaps associated with completed requests.
+   */
   public void pauseAllRequests() {
     isPaused = true;
     for (Request request : Util.getSnapshot(requests)) {
@@ -104,7 +123,9 @@ public class RequestTracker {
     }
   }
 
-  /** Starts any not yet completed or failed requests. */
+  /**
+   * Starts any not yet completed or failed requests.
+   */
   public void resumeRequests() {
     isPaused = false;
     for (Request request : Util.getSnapshot(requests)) {
@@ -132,7 +153,9 @@ public class RequestTracker {
     pendingRequests.clear();
   }
 
-  /** Restarts failed requests and cancels and restarts in progress requests. */
+  /**
+   * Restarts failed requests and cancels and restarts in progress requests.
+   */
   public void restartRequests() {
     for (Request request : Util.getSnapshot(requests)) {
       if (!request.isComplete() && !request.isCleared()) {

@@ -1,18 +1,17 @@
 package com.bumptech.glide.load;
 
 /**
- * Details how an {@link com.bumptech.glide.load.ResourceEncoder} will encode a resource to cache.
+ * 详细说明 {@link com.bumptech.glide.load.ResourceEncoder} 如何对资源进行编码以进行缓存。
  */
 public enum EncodeStrategy {
   /**
-   * Writes the original unmodified data for the resource to disk, not include downsampling or
-   * transformations.
+   * 编写原始的未修改数据，以供磁盘磁盘，而不包括倒数采样或转换
    */
   SOURCE,
 
-  /** Writes the decoded, downsampled and transformed data for the resource to disk. */
+  /** 将解码，倒数采样和转换为磁盘的数据写入 */
   TRANSFORMED,
 
-  /** Will write no data. */
+  /** 不会写入数据。 */
   NONE,
 }

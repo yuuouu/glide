@@ -1,5 +1,7 @@
 package com.bumptech.glide.manager;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 /**
@@ -12,11 +14,13 @@ import androidx.annotation.NonNull;
 class ApplicationLifecycle implements Lifecycle {
   @Override
   public void addListener(@NonNull LifecycleListener listener) {
+    Log.e("yuu", "ApplicationLifecycle addListener");
     listener.onStart();
   }
 
   @Override
   public void removeListener(@NonNull LifecycleListener listener) {
     // Do nothing.
+    Log.e("yuu", "ApplicationLifecycle removeListener ");
   }
 }

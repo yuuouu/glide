@@ -25,22 +25,36 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * A collection of static methods for creating new {@link com.bumptech.glide.RequestManager}s or
- * retrieving existing ones from activities and fragment.
+ * 用于创建新的 {@link com.bumptech.glide.RequestManager}
+ * 或从 Activity 和 Fragment 中检索现有的静态方法的集合。
  */
 public class RequestManagerRetriever implements Handler.Callback {
   @VisibleForTesting static final String FRAGMENT_TAG = "com.bumptech.glide.manager";
-  /** The top application level RequestManager. */
+  // application 级别的 RequestManager
   private volatile RequestManager applicationManager;
-
+  // 其它级别的 RequestManager 通过工厂模式来创建
   private final RequestManagerFactory factory;
 
   // Objects used to find Fragments and Activities containing views.
+  /**
+   * 用于查找包含 views 的 Activities 和 Fragments 的对象。
+   */
   private final ArrayMap<View, Fragment> tempViewToSupportFragment = new ArrayMap<>();
   // This is really misplaced here, but to put it anywhere else means duplicating all of the
   // Fragment/Activity extraction logic that already exists here. It's gross, but less likely to
   // break.
+  /**
+   * 在 Android9(P) 的系统上 && 非 applicationManager 的 manager
+   * 绘制出第一帧的时候解除硬件加速位图的阻塞
+   * 应该是为了兼容 GPU 绘制
+   * <br>
+   * 通过 {@link FirstFrameWaiter#registerSelf(Activity)} 执行 {@link HardwareConfigState#unblockHardwareBitmaps}
+   */
   private final FrameWaiter frameWaiter;
+
+  /**
+   *非 applicationManager 的 manager 生命周期管理全部在这里
+   */
   private final LifecycleRequestManagerRetriever lifecycleRequestManagerRetriever;
 
   public RequestManagerRetriever(@Nullable RequestManagerFactory factory) {
@@ -50,8 +64,7 @@ public class RequestManagerRetriever implements Handler.Callback {
   }
 
   private static FrameWaiter buildFrameWaiter() {
-    if (!HardwareConfigState.HARDWARE_BITMAPS_SUPPORTED
-        || !HardwareConfigState.BLOCK_HARDWARE_BITMAPS_WHEN_GL_CONTEXT_MIGHT_NOT_BE_INITIALIZED) {
+    if (!HardwareConfigState.HARDWARE_BITMAPS_SUPPORTED || !HardwareConfigState.BLOCK_HARDWARE_BITMAPS_WHEN_GL_CONTEXT_MIGHT_NOT_BE_INITIALIZED) {
       return new DoNothingFirstFrameWaiter();
     }
     return new FirstFrameWaiter();
@@ -59,27 +72,17 @@ public class RequestManagerRetriever implements Handler.Callback {
 
   @NonNull
   private RequestManager getApplicationManager(@NonNull Context context) {
-    // Either an application context or we're on a background thread.
     if (applicationManager == null) {
       synchronized (this) {
         if (applicationManager == null) {
-          // Normally pause/resume is taken care of by the fragment we add to the fragment or
-          // activity. However, in this case since the manager attached to the application will not
-          // receive lifecycle events, we must force the manager to start resumed using
-          // ApplicationLifecycle.
-
-          // TODO(b/27524013): Factor out this Glide.get() call.
+          // 通常情况下，pause/resume 是由我们添加到 Fragment 或 Activity 中的 Fragment 负责的
+          // 当 Context 是 Application 或者处于后台线程时，由于附加到应用程序的管理器不会接收生命周期事件
+          // 因此我们必须手动创建 ApplicationLifecycle 强制管理器启动并恢复
           Glide glide = Glide.get(context.getApplicationContext());
-          applicationManager =
-              factory.build(
-                  glide,
-                  new ApplicationLifecycle(),
-                  new EmptyRequestManagerTreeNode(),
-                  context.getApplicationContext());
+          applicationManager = factory.build(glide, new ApplicationLifecycle(), new EmptyRequestManagerTreeNode(), context.getApplicationContext());
         }
       }
     }
-
     return applicationManager;
   }
 
@@ -91,60 +94,51 @@ public class RequestManagerRetriever implements Handler.Callback {
       if (context instanceof FragmentActivity) {
         return get((FragmentActivity) context);
       } else if (context instanceof ContextWrapper
-          // Only unwrap a ContextWrapper if the baseContext has a non-null application context.
-          // Context#createPackageContext may return a Context without an Application instance,
-          // in which case a ContextWrapper may be used to attach one.
+          // 仅在BaseContext具有非NULL应用程序上下文的情况下拆开ContextWrapper
+          // Context#createPackageContext 可能返回一个没有 Application 实例的 Context
+          // 在这种情况下，可以使用 ContextWrapper 来附加一个
           && ((ContextWrapper) context).getBaseContext().getApplicationContext() != null) {
         return get(((ContextWrapper) context).getBaseContext());
       }
     }
-
     return getApplicationManager(context);
   }
 
   @NonNull
   public RequestManager get(@NonNull FragmentActivity activity) {
     if (Util.isOnBackgroundThread()) {
+      // 后台线程会有潜在的内存泄漏和生命周期管理问题
       return get(activity.getApplicationContext());
     }
     assertNotDestroyed(activity);
     frameWaiter.registerSelf(activity);
     boolean isActivityVisible = isActivityVisible(activity);
     Glide glide = Glide.get(activity.getApplicationContext());
-    return lifecycleRequestManagerRetriever.getOrCreate(
-        activity,
-        glide,
-        activity.getLifecycle(),
-        activity.getSupportFragmentManager(),
-        isActivityVisible);
+    return lifecycleRequestManagerRetriever.getOrCreate(activity, glide, activity.getLifecycle(), activity.getSupportFragmentManager(), isActivityVisible);
   }
 
   @NonNull
   public RequestManager get(@NonNull Fragment fragment) {
-    Preconditions.checkNotNull(
-        fragment.getContext(),
-        "You cannot start a load on a fragment before it is attached or after it is destroyed");
+    Preconditions.checkNotNull(fragment.getContext(), "You cannot start a load on a fragment before it is attached or after it is destroyed");
     if (Util.isOnBackgroundThread()) {
+      // 在后台线程获取Context会有潜在的内存泄漏和生命周期管理问题
       return get(fragment.getContext().getApplicationContext());
     }
-    // In some unusual cases, it's possible to have a Fragment not hosted by an activity. There's
-    // not all that much we can do here. Most apps will be started with a standard activity. If
-    // we manage not to register the first frame waiter for a while, the consequences are not
-    // catastrophic, we'll just use some extra memory.
+    // 在某些特殊情况下，Fragment 可能没有被 Activity 托管。
+    // 我们对此无能为力。大多数应用都会以标准 Activity 启动。
+    // 如果我们暂时没有注册第一个帧等待器，后果不会很严重，只是会占用一些额外的内存。
     if (fragment.getActivity() != null) {
       frameWaiter.registerSelf(fragment.getActivity());
     }
     FragmentManager fm = fragment.getChildFragmentManager();
     Context context = fragment.getContext();
     Glide glide = Glide.get(context.getApplicationContext());
-    return lifecycleRequestManagerRetriever.getOrCreate(
-        context, glide, fragment.getLifecycle(), fm, fragment.isVisible());
+    return lifecycleRequestManagerRetriever.getOrCreate(context, glide, fragment.getLifecycle(), fm, fragment.isVisible());
   }
 
   /**
    * @deprecated This is identical to calling {@link #get(Context)} with the application context.
-   *     Use androidx Activities instead (ie {@link FragmentActivity}, or {@link
-   *     androidx.appcompat.app.AppCompatActivity}).
+   * Use androidx Activities instead (ie {@link FragmentActivity}, or {@link androidx.appcompat.app.AppCompatActivity}).
    */
   @Deprecated
   @NonNull
@@ -155,28 +149,24 @@ public class RequestManagerRetriever implements Handler.Callback {
   @NonNull
   public RequestManager get(@NonNull View view) {
     if (Util.isOnBackgroundThread()) {
+      // 在后台线程获取Context会有潜在的内存泄漏和生命周期管理问题
       return get(view.getContext().getApplicationContext());
     }
 
     Preconditions.checkNotNull(view);
-    Preconditions.checkNotNull(
-        view.getContext(), "Unable to obtain a request manager for a view without a Context");
+    Preconditions.checkNotNull(view.getContext(),"Unable to obtain a request manager for a view without a Context");
     Activity activity = findActivity(view.getContext());
-    // The view might be somewhere else, like a service.
+    // View可能是其他地方传过来的，例如 Service
     if (activity == null) {
       return get(view.getContext().getApplicationContext());
     }
 
-    // Support Fragments.
-    // Although the user might have non-support Fragments attached to FragmentActivity, searching
-    // for non-support Fragments is so expensive pre O and that should be rare enough that we
-    // prefer to just fall back to the Activity directly.
+    // 支持 Fragment。尽管用户可能将不支持的 Fragment 附加到 FragmentActivity，但在 8.0 之前，搜索不支持的 Fragment 的成本非常高，
+    // 这种情况应该很少见，因此我们更倾向于直接回退到 Activity。
     if (activity instanceof FragmentActivity) {
       Fragment fragment = findSupportFragment(view, (FragmentActivity) activity);
       return fragment != null ? get(fragment) : get((FragmentActivity) activity);
     }
-
-    // Standard Fragments.
     return get(view.getContext().getApplicationContext());
   }
 
@@ -261,7 +251,7 @@ public class RequestManagerRetriever implements Handler.Callback {
 
   /**
    * @deprecated This method is no longer called by Glide or provides any functionality and it will
-   *     be removed in the future. Retained for now to preserve backwards compatibility.
+   * be removed in the future. Retained for now to preserve backwards compatibility.
    */
   @Deprecated
   @SuppressWarnings("PMD.CollapsibleIfStatements")
@@ -270,7 +260,9 @@ public class RequestManagerRetriever implements Handler.Callback {
     return false;
   }
 
-  /** Used internally to create {@link RequestManager}s. */
+  /**
+   * Used internally to create {@link RequestManager}s.
+   */
   public interface RequestManagerFactory {
     @NonNull
     RequestManager build(

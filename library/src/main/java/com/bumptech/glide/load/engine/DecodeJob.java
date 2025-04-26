@@ -35,11 +35,7 @@ import java.util.Map;
  * @param <R> The type of resource that will be transcoded from the decoded and transformed
  *     resource.
  */
-class DecodeJob<R>
-    implements DataFetcherGenerator.FetcherReadyCallback,
-        Runnable,
-        Comparable<DecodeJob<?>>,
-        Poolable {
+class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnable, Comparable<DecodeJob<?>>, Poolable {
   private static final String TAG = "DecodeJob";
 
   private final DecodeHelper<R> decodeHelper = new DecodeHelper<>();
@@ -351,15 +347,11 @@ class DecodeJob<R>
   private Stage getNextStage(Stage current) {
     switch (current) {
       case INITIALIZE:
-        return diskCacheStrategy.decodeCachedResource()
-            ? Stage.RESOURCE_CACHE
-            : getNextStage(Stage.RESOURCE_CACHE);
+        return diskCacheStrategy.decodeCachedResource() ? Stage.RESOURCE_CACHE : getNextStage(Stage.RESOURCE_CACHE);
       case RESOURCE_CACHE:
-        return diskCacheStrategy.decodeCachedData()
-            ? Stage.DATA_CACHE
-            : getNextStage(Stage.DATA_CACHE);
+        return diskCacheStrategy.decodeCachedData() ? Stage.DATA_CACHE : getNextStage(Stage.DATA_CACHE);
       case DATA_CACHE:
-        // Skip loading from source if the user opted to only retrieve the resource from cache.
+        // 如果用户选择仅从缓存中检索资源，则跳过源
         return onlyRetrieveFromCache ? Stage.FINISHED : Stage.SOURCE;
       case SOURCE:
       case FINISHED:
@@ -419,15 +411,7 @@ class DecodeJob<R>
 
   private void decodeFromRetrievedData() {
     if (Log.isLoggable(TAG, Log.VERBOSE)) {
-      logWithTimeAndKey(
-          "Retrieved data",
-          startFetchTime,
-          "data: "
-              + currentData
-              + ", cache key: "
-              + currentSourceKey
-              + ", fetcher: "
-              + currentFetcher);
+      logWithTimeAndKey("Retrieved data", startFetchTime, "data: " + currentData + ", cache key: " + currentSourceKey + ", fetcher: " + currentFetcher);
     }
     Resource<R> resource = null;
     try {
@@ -739,30 +723,29 @@ class DecodeJob<R>
 
   /** Why we're being executed again. */
   private enum RunReason {
-    /** The first time we've been submitted. */
+    /** 初始 */
     INITIALIZE,
-    /** We want to switch from the disk cache service to the source executor. */
+    /** 我们想从磁盘缓存服务切换到源执行程序 */
     SWITCH_TO_SOURCE_SERVICE,
     /**
-     * We retrieved some data on a thread we don't own and want to switch back to our thread to
-     * process the data.
+     * 我们在不拥有的线程上检索了一些数据，并想切换回我们的线程处理数据
      */
     DECODE_DATA,
   }
 
-  /** Where we're trying to decode data from. */
+  /** 我们试图从哪里解码数据 */
   private enum Stage {
-    /** The initial stage. */
+    /** 初始阶段 */
     INITIALIZE,
-    /** Decode from a cached resource. */
+    /** 从缓存的资源解码 */
     RESOURCE_CACHE,
-    /** Decode from cached source data. */
+    /** 从缓存的源数据解码 */
     DATA_CACHE,
-    /** Decode from retrieved source. */
+    /** 从检索到的源解码 */
     SOURCE,
-    /** Encoding transformed resources after a successful load. */
+    /** 成功加载后对转换后的资源进行编码 */
     ENCODE,
-    /** No more viable stages. */
+    /** 不可再执行的阶段 */
     FINISHED,
   }
 }

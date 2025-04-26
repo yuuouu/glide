@@ -233,15 +233,13 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
         throw new IllegalArgumentException("Cannot restart a running request");
       }
 
-      // If we're restarted after we're complete (usually via something like a notifyDataSetChanged
-      // that starts an identical request into the same Target or View), we can simply use the
-      // resource and size we retrieved the last time around and skip obtaining a new size, starting
-      // a new load etc. This does mean that users who want to restart a load because they expect
-      // that the view size has changed will need to explicitly clear the View or Target before
-      // starting the new load.
+      /**
+       * 如果我们在完成后重新启动（通常通过类似notifyDataSetChanged的方式，向同一个Target或View发起相同的请求），
+       * 我们可以简单地使用上次检索到的资源和大小，而跳过获取新大小、启动新的加载等步骤。
+       * 这意味着，如果用户预计视图大小已更改，因此想要重新启动加载，则需要在开始新的加载之前明确清除View或Target。
+       */
       if (status == Status.COMPLETE) {
-        onResourceReady(
-            resource, DataSource.MEMORY_CACHE, /* isLoadedFromAlternateCacheKey= */ false);
+        onResourceReady(resource, DataSource.MEMORY_CACHE, /* isLoadedFromAlternateCacheKey= */ false);
         return;
       }
 
@@ -255,6 +253,10 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
       if (Util.isValidDimensions(overrideWidth, overrideHeight)) {
         onSizeReady(overrideWidth, overrideHeight);
       } else {
+        /**
+         * 这里实际上也会执行到 {@link onSizeReady(overrideWidth, overrideHeight)}
+         * 例如：{@link com.bumptech.glide.request.target.ViewTarget.SizeDeterminer#getSize(SizeReadyCallback)}
+         */
         target.getSize(this);
       }
 
@@ -464,27 +466,10 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
       if (IS_VERBOSE_LOGGABLE) {
         logV("finished setup for calling load in " + LogTime.getElapsedMillis(startTime));
       }
-      loadStatus =
-          engine.load(
-              glideContext,
-              model,
-              requestOptions.getSignature(),
-              this.width,
-              this.height,
-              requestOptions.getResourceClass(),
-              transcodeClass,
-              priority,
-              requestOptions.getDiskCacheStrategy(),
-              requestOptions.getTransformations(),
-              requestOptions.isTransformationRequired(),
-              requestOptions.isScaleOnlyOrNoTransform(),
-              requestOptions.getOptions(),
-              requestOptions.isMemoryCacheable(),
-              requestOptions.getUseUnlimitedSourceGeneratorsPool(),
-              requestOptions.getUseAnimationPool(),
-              requestOptions.getOnlyRetrieveFromCache(),
-              this,
-              callbackExecutor);
+      loadStatus = engine.load(glideContext, model, requestOptions.getSignature(), this.width, this.height, requestOptions.getResourceClass(), transcodeClass, priority,
+              requestOptions.getDiskCacheStrategy(), requestOptions.getTransformations(), requestOptions.isTransformationRequired(), requestOptions.isScaleOnlyOrNoTransform(),
+              requestOptions.getOptions(), requestOptions.isMemoryCacheable(), requestOptions.getUseUnlimitedSourceGeneratorsPool(), requestOptions.getUseAnimationPool(),
+              requestOptions.getOnlyRetrieveFromCache(), this, callbackExecutor);
 
       // This is a hack that's only useful for testing right now where loads complete synchronously
       // even though under any executor running on any thread but the main thread, the load would
@@ -539,20 +524,14 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
   /** A callback method that should never be invoked directly. */
   @SuppressWarnings("unchecked")
   @Override
-  public void onResourceReady(
-      Resource<?> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
+  public void onResourceReady(Resource<?> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
     stateVerifier.throwIfRecycled();
     Resource<?> toRelease = null;
     try {
       synchronized (requestLock) {
         loadStatus = null;
         if (resource == null) {
-          GlideException exception =
-              new GlideException(
-                  "Expected to receive a Resource<R> with an "
-                      + "object of "
-                      + transcodeClass
-                      + " inside, but instead got null.");
+          GlideException exception = new GlideException("Expected to receive a Resource<R> with an " + "object of " + transcodeClass + " inside, but instead got null.");
           onLoadFailed(exception);
           return;
         }
@@ -562,24 +541,9 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
           toRelease = resource;
           this.resource = null;
           GlideException exception =
-              new GlideException(
-                  "Expected to receive an object of "
-                      + transcodeClass
-                      + " but instead"
-                      + " got "
-                      + (received != null ? received.getClass() : "")
-                      + "{"
-                      + received
-                      + "} inside"
-                      + " "
-                      + "Resource{"
-                      + resource
-                      + "}."
-                      + (received != null
-                          ? ""
-                          : " "
-                              + "To indicate failure return a null Resource "
-                              + "object, rather than a Resource object containing null data."));
+              new GlideException("Expected to receive an object of " + transcodeClass + " but instead" + " got " + (received != null ? received.getClass() : "")
+                      + "{" + received + "} inside" + " " + "Resource{" + resource + "}."
+                      + (received != null ? "" : " " + "To indicate failure return a null Resource " + "object, rather than a Resource object containing null data."));
           onLoadFailed(exception);
           return;
         }
@@ -593,8 +557,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
           return;
         }
 
-        onResourceReady(
-            (Resource<R>) resource, (R) received, dataSource, isLoadedFromAlternateCacheKey);
+        onResourceReady((Resource<R>) resource, (R) received, dataSource, isLoadedFromAlternateCacheKey);
       }
     } finally {
       if (toRelease != null) {
@@ -614,29 +577,15 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
   // We're using experimental APIs...
   @SuppressWarnings({"deprecation", "PMD.UnusedFormalParameter"})
   @GuardedBy("requestLock")
-  private void onResourceReady(
-      Resource<R> resource, R result, DataSource dataSource, boolean isAlternateCacheKey) {
+  private void onResourceReady(Resource<R> resource, R result, DataSource dataSource, boolean isAlternateCacheKey) {
     // We must call isFirstReadyResource before setting status.
     boolean isFirstResource = isFirstReadyResource();
     status = Status.COMPLETE;
     this.resource = resource;
 
     if (glideContext.getLogLevel() <= Log.DEBUG) {
-      Log.d(
-          GLIDE_TAG,
-          "Finished loading "
-              + result.getClass().getSimpleName()
-              + " from "
-              + dataSource
-              + " for "
-              + model
-              + " with size ["
-              + width
-              + "x"
-              + height
-              + "] in "
-              + LogTime.getElapsedMillis(startTime)
-              + " ms");
+      Log.d(GLIDE_TAG, "Finished loading " + result.getClass().getSimpleName() + " from " + dataSource + " for " + model
+              + " with size [" + width + "x" + height + "] in " + LogTime.getElapsedMillis(startTime) + " ms");
     }
 
     notifyRequestCoordinatorLoadSucceeded();
@@ -646,21 +595,15 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
       boolean anyListenerHandledUpdatingTarget = false;
       if (requestListeners != null) {
         for (RequestListener<R> listener : requestListeners) {
-          anyListenerHandledUpdatingTarget |=
-              listener.onResourceReady(result, model, target, dataSource, isFirstResource);
+          anyListenerHandledUpdatingTarget |= listener.onResourceReady(result, model, target, dataSource, isFirstResource);
 
           if (listener instanceof ExperimentalRequestListener) {
-            ExperimentalRequestListener<R> experimentalRequestListener =
-                (ExperimentalRequestListener<R>) listener;
-            anyListenerHandledUpdatingTarget |=
-                experimentalRequestListener.onResourceReady(
-                    result, model, target, dataSource, isFirstResource, isAlternateCacheKey);
+            ExperimentalRequestListener<R> experimentalRequestListener = (ExperimentalRequestListener<R>) listener;
+            anyListenerHandledUpdatingTarget |= experimentalRequestListener.onResourceReady(result, model, target, dataSource, isFirstResource, isAlternateCacheKey);
           }
         }
       }
-      anyListenerHandledUpdatingTarget |=
-          targetListener != null
-              && targetListener.onResourceReady(result, model, target, dataSource, isFirstResource);
+      anyListenerHandledUpdatingTarget |= targetListener != null && targetListener.onResourceReady(result, model, target, dataSource, isFirstResource);
 
       if (!anyListenerHandledUpdatingTarget) {
         Transition<? super R> animation = animationFactory.build(dataSource, isFirstResource);
@@ -691,10 +634,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
       e.setOrigin(requestOrigin);
       int logLevel = glideContext.getLogLevel();
       if (logLevel <= maxLogLevel) {
-        Log.w(
-            GLIDE_TAG,
-            "Load failed for [" + model + "] with dimensions [" + width + "x" + height + "]",
-            e);
+        Log.w(GLIDE_TAG, "Load failed for [" + model + "] with dimensions [" + width + "x" + height + "]", e);
         if (logLevel <= Log.INFO) {
           e.logRootCauses(GLIDE_TAG);
         }
@@ -711,13 +651,10 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
         boolean anyListenerHandledUpdatingTarget = false;
         if (requestListeners != null) {
           for (RequestListener<R> listener : requestListeners) {
-            anyListenerHandledUpdatingTarget |=
-                listener.onLoadFailed(e, model, target, isFirstReadyResource());
+            anyListenerHandledUpdatingTarget |= listener.onLoadFailed(e, model, target, isFirstReadyResource());
           }
         }
-        anyListenerHandledUpdatingTarget |=
-            targetListener != null
-                && targetListener.onLoadFailed(e, model, target, isFirstReadyResource());
+        anyListenerHandledUpdatingTarget |= targetListener != null && targetListener.onLoadFailed(e, model, target, isFirstReadyResource());
 
         if (!anyListenerHandledUpdatingTarget) {
           setErrorPlaceholder();

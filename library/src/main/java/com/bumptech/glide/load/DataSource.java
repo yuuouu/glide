@@ -1,18 +1,18 @@
 package com.bumptech.glide.load;
 
-/** Indicates the origin of some retrieved data. */
+/** 指示一些检索到的数据的起源 */
 public enum DataSource {
   /**
-   * Indicates data was probably retrieved locally from the device, although it may have been
-   * obtained through a content provider that may have obtained the data from a remote source.
+   * 数据可能是从设备本地检索的，
+   * 尽管它可能是通过从远程源获取数据的内容提供商获得的。
    */
   LOCAL,
-  /** Indicates data was retrieved from a remote source other than the device. */
+  /** 从设备以外的远程源检索的 */
   REMOTE,
-  /** Indicates data was retrieved unmodified from the on device cache. */
+  /** 从设备缓存中检索到未经修改的数据 */
   DATA_DISK_CACHE,
-  /** Indicates data was retrieved from modified content in the on device cache. */
+  /** 从设备缓存中修改过的内容中检索到的 */
   RESOURCE_DISK_CACHE,
-  /** Indicates data was retrieved from the in memory cache. */
+  /** 从内存缓存中检索的 */
   MEMORY_CACHE,
 }

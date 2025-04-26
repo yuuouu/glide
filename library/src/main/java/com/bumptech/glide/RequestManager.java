@@ -10,6 +10,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.util.Log;
 import android.view.View;
 import androidx.annotation.CheckResult;
 import androidx.annotation.DrawableRes;
@@ -20,6 +21,7 @@ import androidx.annotation.RawRes;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.load.engine.Resource;
 import com.bumptech.glide.load.resource.gif.GifDrawable;
 import com.bumptech.glide.manager.ConnectivityMonitor;
 import com.bumptech.glide.manager.ConnectivityMonitorFactory;
@@ -32,21 +34,24 @@ import com.bumptech.glide.request.BaseRequestOptions;
 import com.bumptech.glide.request.Request;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.SingleRequest;
 import com.bumptech.glide.request.target.CustomViewTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
 import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.Util;
+import com.bumptech.glide.util.pool.GlideTrace;
 import java.io.File;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 
 /**
- * A class for managing and starting requests for Glide. Can use activity, fragment and connectivity
- * lifecycle events to intelligently stop, start, and restart requests. Retrieve either by
- * instantiating a new object, or to take advantage built in Activity and Fragment lifecycle
- * handling, use the static Glide.load methods with your Fragment or Activity.
+ * 用于管理和启动 Glide 请求的类。
+ * 可以使用 Activity、Fragment 和连接生命周期事件来智能地停止、启动和重新启动请求。
+ * 您可以通过实例化新对象来获取请求，或者为了利用内置的 Activity 和 Fragment 生命周期处理功能，
+ * 请在 Fragment 或 Activity 中使用静态 Glide.load 方法。
  *
  * @see Glide#with(android.app.Activity)
  * @see Glide#with(androidx.fragment.app.FragmentActivity)
@@ -58,8 +63,7 @@ public class RequestManager
     implements ComponentCallbacks2, LifecycleListener, ModelTypes<RequestBuilder<Drawable>> {
   private static final RequestOptions DECODE_TYPE_BITMAP = decodeTypeOf(Bitmap.class).lock();
   private static final RequestOptions DECODE_TYPE_GIF = decodeTypeOf(GifDrawable.class).lock();
-  private static final RequestOptions DOWNLOAD_ONLY_OPTIONS =
-      diskCacheStrategyOf(DiskCacheStrategy.DATA).priority(Priority.LOW).skipMemoryCache(true);
+  private static final RequestOptions DOWNLOAD_ONLY_OPTIONS = diskCacheStrategyOf(DiskCacheStrategy.DATA).priority(Priority.LOW).skipMemoryCache(true);
 
   protected final Glide glide;
   protected final Context context;
@@ -68,14 +72,44 @@ public class RequestManager
   @Synthetic
   final Lifecycle lifecycle;
 
+  /**
+   * <p>职责分离原则设计，RequestTracker 负责跟踪和管理由该 RequestManager 发起的所有 Request 对象
+   *
+   * <p>Request 是单个加载请求的抽象接口，代表一个具体的资源加载过程（开始、暂停、停止、回收）
+   * <p>开始准备资源 {@link SingleRequest#begin()} <br>
+   * 准备方法里调用263行 {@code target.onLoadStarted(getPlaceholderDrawable())} 通知给 {@link Target#onLoadStarted(Drawable)}
+   *
+   * <p>资源准备完成后在这个方法 {@link SingleRequest#onResourceReady(Resource, Object, DataSource, boolean)} 里调用
+   * 650行 {@code listener.onResourceReady(result, model, target, dataSource, isFirstResource)} 同步给 {@link RequestListener#onResourceReady(Object, Object, Target, DataSource, boolean)} 和
+   * 667行 {@code target.onResourceReady(result, animation)} 同步给 {@link Target#onResourceReady(Object, Transition)}
+   *
+   * <p>类似的，如果资源准备失败则调用 {@link SingleRequest#onLoadFailed(GlideException)}
+   *
+   * @see Request
+   * @see SingleRequest#begin()
+   * @see SingleRequest#onResourceReady(Resource, Object, DataSource, boolean)
+   * @see SingleRequest#onLoadFailed(GlideException)
+   */
   @GuardedBy("this")
   private final RequestTracker requestTracker;
 
-  @GuardedBy("this")
-  private final RequestManagerTreeNode treeNode;
-
+  /**
+   * 职责分离原则设计，TargetTracker 专门用于集中管理和通知所有关联的 Target 的生命周期事件
+   * <p> Target 是一个核心接口，负责在资源加载过程、加载完成、加载失败等事件中执行任务
+   * <br>
+   * 所有通过 Glide 加载的图片（无论是显示到 ImageView、写入文件，还是自定义处理）最终都会通过 Target 接收结果
+   * @see Target
+   */
   @GuardedBy("this")
   private final TargetTracker targetTracker = new TargetTracker();
+
+  /**
+   * 在生命周期改变时寻找所有受影响的 RequestManager 节点，以便进行统一处理
+   *
+   * @see com.bumptech.glide.manager.LifecycleRequestManagerRetriever.SupportRequestManagerTreeNode#getDescendants()
+   **/
+  @GuardedBy("this")
+  private final RequestManagerTreeNode treeNode;
 
   private final Runnable addSelfToLifecycle =
       new Runnable() {
@@ -84,12 +118,36 @@ public class RequestManager
           lifecycle.addListener(RequestManager.this);
         }
       };
+  /**
+   * 网络连接状态的监视器
+   * <p>
+   * 1.在创建的时候判断是否有网络权限 {@link com.bumptech.glide.manager.DefaultConnectivityMonitorFactory#build(Context, ConnectivityMonitor.ConnectivityListener)}
+   * <br>
+   * 2.有网络权限的话注册网络监听服务 {@link com.bumptech.glide.manager.SingletonConnectivityReceiver#SingletonConnectivityReceiver(Context)}}
+   * <br>
+   * 3.通过 {@link RequestManagerConnectivityListener#onConnectivityChanged} 回调给 {@link #requestTracker}
+   **/
   private final ConnectivityMonitor connectivityMonitor;
-  // Adding default listeners should be much less common than starting new requests. We want
-  // some way of making sure that requests don't mutate our listeners without creating a new copy of
-  // the list each time a request is started.
+
+  /**
+   * 保存所有的图片监听加载请求状态，每个监听器都会起作用
+   * <br>
+   * RequestListener 中仅有 onLoadFailed 和 onResourceReady 方法
+   *
+   * @see #addDefaultRequestListener(RequestListener)
+   */
   private final CopyOnWriteArrayList<RequestListener<Object>> defaultRequestListeners;
 
+  /**
+   * 配置此次加载请求参数，默认为全局配置 {@link com.bumptech.glide.module.AppGlideModule#applyOptions}
+   * 冲突时覆盖对应属性
+   * <br>
+   * 外部调用时使用 {@link RequestBuilder#apply(BaseRequestOptions)}
+   * <br>
+   * 默认配置使用 {@link #applyDefaultRequestOptions(RequestOptions)}
+   *
+   * @see BaseRequestOptions#apply(BaseRequestOptions)
+   */
   @GuardedBy("this")
   private RequestOptions requestOptions;
 
@@ -97,48 +155,27 @@ public class RequestManager
 
   private boolean clearOnStop;
 
-  public RequestManager(
-      @NonNull Glide glide,
-      @NonNull Lifecycle lifecycle,
-      @NonNull RequestManagerTreeNode treeNode,
-      @NonNull Context context) {
-    this(
-        glide,
-        lifecycle,
-        treeNode,
-        new RequestTracker(),
-        glide.getConnectivityMonitorFactory(),
-        context);
+  public RequestManager(@NonNull Glide glide, @NonNull Lifecycle lifecycle,
+      @NonNull RequestManagerTreeNode treeNode, @NonNull Context context) {
+    this(glide, lifecycle, treeNode, new RequestTracker(), glide.getConnectivityMonitorFactory(), context);
   }
 
   // Our usage is safe here.
   @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
-  RequestManager(
-      Glide glide,
-      Lifecycle lifecycle,
-      RequestManagerTreeNode treeNode,
-      RequestTracker requestTracker,
-      ConnectivityMonitorFactory factory,
-      Context context) {
+  RequestManager(Glide glide, Lifecycle lifecycle, RequestManagerTreeNode treeNode, RequestTracker requestTracker, ConnectivityMonitorFactory factory, Context context) {
     this.glide = glide;
     this.lifecycle = lifecycle;
     this.treeNode = treeNode;
     this.requestTracker = requestTracker;
     this.context = context;
-
-    connectivityMonitor =
-        factory.build(
-            context.getApplicationContext(),
-            new RequestManagerConnectivityListener(requestTracker));
-
-    // Order matters, this might be unregistered by teh listeners below, so we need to be sure to
-    // register first to prevent both assertions and memory leaks.
+    connectivityMonitor = factory.build(context.getApplicationContext(), new RequestManagerConnectivityListener(requestTracker));
+    Log.e("yuu", "RequestManager: requestTracker=" + requestTracker.hashCode() + " targetTracker=" + targetTracker.hashCode());
+    // 顺序很重要，这可能会被下面的听众取消注册，所以我们需要确保先注册以防止断言和内存泄漏。
     glide.registerRequestManager(this);
 
-    // If we're the application level request manager, we may be created on a background thread.
-    // In that case we cannot risk synchronously pausing or resuming requests, so we hack around the
-    // issue by delaying adding ourselves as a lifecycle listener by posting to the main thread.
-    // This should be entirely safe.
+    // 如果我们是应用级请求管理器，我们可能会在后台线程中创建。
+    // 在这种情况下，我们不能冒险同步暂停或恢复请求，因此我们通过延迟将自身添加为生命周期监听器（通过将其发布到主线程）来解决这个问题。
+    // 这应该是完全安全的。
     if (Util.isOnBackgroundThread()) {
       Util.postOnUiThread(addSelfToLifecycle);
     } else {
@@ -146,8 +183,7 @@ public class RequestManager
     }
     lifecycle.addListener(connectivityMonitor);
 
-    defaultRequestListeners =
-        new CopyOnWriteArrayList<>(glide.getGlideContext().getDefaultRequestListeners());
+    defaultRequestListeners = new CopyOnWriteArrayList<>(glide.getGlideContext().getDefaultRequestListeners());
     setRequestOptions(glide.getGlideContext().getDefaultRequestOptions());
   }
 
@@ -160,25 +196,18 @@ public class RequestManager
   }
 
   /**
-   * Updates the default {@link RequestOptions} for all loads started with this request manager with
-   * the given {@link RequestOptions}.
+   * 使用新的配置更新此请求管理器启动的所有加载的 {@link RequestOptions}
    *
-   * <p>The {@link RequestOptions} provided here are applied on top of those provided via {@link
-   * GlideBuilder#setDefaultRequestOptions(RequestOptions)}. If there are conflicts, the options
-   * applied here will win. Note that this method does not mutate options provided to {@link
-   * GlideBuilder#setDefaultRequestOptions(RequestOptions)}.
+   * <p>此处提供的配置优先级比 {@link GlideBuilder#setDefaultRequestOptions(RequestOptions)} 默认配置高。
+   * 可以应用多组选项。如果存在冲突，则最后的配置生效。不冲突则叠加
+   * <p>请注意，此方法不会改变默认配置
+   * <p>修改后的选项将仅应用于调用此方法后启动的加载。
    *
-   * <p>Multiple sets of options can be applied. If there are conflicts the last {@link
-   * RequestOptions} applied will win.
-   *
-   * <p>The modified options will only be applied to loads started after this method is called.
-   *
-   * @see RequestBuilder#apply(BaseRequestOptions)
    * @return This request manager.
+   * @see RequestBuilder#apply(BaseRequestOptions)
    */
   @NonNull
-  public synchronized RequestManager applyDefaultRequestOptions(
-      @NonNull RequestOptions requestOptions) {
+  public synchronized RequestManager applyDefaultRequestOptions(@NonNull RequestOptions requestOptions) {
     updateRequestOptions(requestOptions);
     return this;
   }
@@ -195,12 +224,11 @@ public class RequestManager
    * {@link RequestOptions} provided here. Instead the manager will create a clone of these options
    * and mutate the clone.
    *
-   * @see #applyDefaultRequestOptions(RequestOptions)
    * @return This request manager.
+   * @see #applyDefaultRequestOptions(RequestOptions)
    */
   @NonNull
-  public synchronized RequestManager setDefaultRequestOptions(
-      @NonNull RequestOptions requestOptions) {
+  public synchronized RequestManager setDefaultRequestOptions(@NonNull RequestOptions requestOptions) {
     setRequestOptions(requestOptions);
     return this;
   }
@@ -217,21 +245,17 @@ public class RequestManager
   }
 
   /**
-   * Adds a default {@link RequestListener} that will be added to every request started with this
-   * {@link RequestManager}.
+   * 添加一个默认的 {@link RequestListener}，它将添加到此 {@link RequestManager} 启动的每个 {@link Request} 中。
    *
-   * <p>Multiple {@link RequestListener}s can be added here, in {@link RequestManager} scopes or to
-   * individual {@link RequestBuilder}s. {@link RequestListener}s are called in the order they're
-   * added. Even if an earlier {@link RequestListener} returns {@code true} from {@link
-   * RequestListener#onLoadFailed(GlideException, Object, Target, boolean)} or {@link
-   * RequestListener#onResourceReady(Object, Object, Target, DataSource, boolean)}, it will not
-   * prevent subsequent {@link RequestListener}s from being called.
+   * <p>可以在 {@link RequestManager} 作用域内添加单个或多个 {@link RequestListener}。
+   * 按照其添加的顺序调用。即使先前的 {@link RequestListener#onLoadFailed(GlideException, Object, Target, boolean)} 或
+   * {@link RequestListener#onResourceReady(Object, Object, Target, DataSource, boolean)} 中返回 {@code true}，
+   * 也不会阻止后续的 {@link RequestListener} 被调用。
    *
-   * <p>Because Glide requests can be started for any number of individual resource types, any
-   * listener added here has to accept any generic resource type in {@link
-   * RequestListener#onResourceReady(Object, Object, Target, DataSource, boolean)}. If you must base
-   * the behavior of the listener on the resource type, you will need to use {@code instanceof} to
-   * do so. It's not safe to cast resource types without first checking with {@code instanceof}.
+   * <p>由于 Glide 请求可以针对任意数量的单独资源类型启动，因此此处添加的任何监听器都必须接受
+   * {@link RequestListener#onResourceReady(Object, Object, Target, DataSource, boolean)}
+   * 中的任何通用资源类型。如果您必须根据资源类型设置监听器的行为，则需要使用 {@code instanceof} 来执行此操作。
+   * 在没有先使用 {@code instanceof} 检查的情况下强制转换资源类型是不安全的。
    */
   public RequestManager addDefaultRequestListener(RequestListener<Object> requestListener) {
     defaultRequestListeners.add(requestListener);
@@ -386,6 +410,7 @@ public class RequestManager
    */
   @Override
   public synchronized void onDestroy() {
+    Log.e("yuu ", " RequestManager onDestroy: requestTracker=" + requestTracker.hashCode());
     targetTracker.onDestroy();
     clearRequests();
     requestTracker.clearRequests();
@@ -418,7 +443,7 @@ public class RequestManager
    * Drawable}, animated or not, automatically.
    *
    * @return A new request builder for loading a {@link
-   *     com.bumptech.glide.load.resource.gif.GifDrawable}.
+   * com.bumptech.glide.load.resource.gif.GifDrawable}.
    */
   @NonNull
   @CheckResult
@@ -620,7 +645,7 @@ public class RequestManager
    *
    * @param view The view to cancel loads and free resources for.
    * @throws IllegalArgumentException if an object other than Glide's metadata is put as the view's
-   *     tag.
+   *                                  tag.
    * @see #clear(Target)
    */
   public void clear(@NonNull View view) {
@@ -683,6 +708,11 @@ public class RequestManager
     }
   }
 
+  /**
+   * 外部调用 {@link RequestBuilder#into(Target)} or {@link RequestBuilder#submit()} 进入内部方法
+   * {@link RequestBuilder#into(Target, RequestListener, BaseRequestOptions, Executor)} 里的858行
+   * {@code requestManager.track(target, request)} 跳转到此方法 {@link #track(Target, Request)}
+   */
   synchronized void track(@NonNull Target<?> target, @NonNull Request request) {
     targetTracker.track(target);
     requestTracker.runRequest(request);
@@ -728,8 +758,7 @@ public class RequestManager
   @Override
   public void onConfigurationChanged(Configuration newConfig) {}
 
-  private class RequestManagerConnectivityListener
-      implements ConnectivityMonitor.ConnectivityListener {
+  private class RequestManagerConnectivityListener implements ConnectivityMonitor.ConnectivityListener {
     @GuardedBy("RequestManager.this")
     private final RequestTracker requestTracker;
 

@@ -26,10 +26,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 
 /** Responsible for starting loads and managing active and cached resources. */
-public class Engine
-    implements EngineJobListener,
-        MemoryCache.ResourceRemovedListener,
-        EngineResource.ResourceListener {
+public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedListener, EngineResource.ResourceListener {
   private static final String TAG = "Engine";
   private static final int JOB_POOL_SIZE = 150;
   private static final boolean VERBOSE_IS_LOGGABLE = Log.isLoggable(TAG, Log.VERBOSE);
@@ -217,8 +214,7 @@ public class Engine
 
     // Avoid calling back while holding the engine lock, doing so makes it easier for callers to
     // deadlock.
-    cb.onResourceReady(
-        memoryResource, DataSource.MEMORY_CACHE, /* isLoadedFromAlternateCacheKey= */ false);
+    cb.onResourceReady(memoryResource, DataSource.MEMORY_CACHE, /* isLoadedFromAlternateCacheKey= */ false);
     return null;
   }
 
@@ -495,42 +491,12 @@ public class Engine
     }
 
     @SuppressWarnings("unchecked")
-    <R> DecodeJob<R> build(
-        GlideContext glideContext,
-        Object model,
-        EngineKey loadKey,
-        Key signature,
-        int width,
-        int height,
-        Class<?> resourceClass,
-        Class<R> transcodeClass,
-        Priority priority,
-        DiskCacheStrategy diskCacheStrategy,
-        Map<Class<?>, Transformation<?>> transformations,
-        boolean isTransformationRequired,
-        boolean isScaleOnlyOrNoTransform,
-        boolean onlyRetrieveFromCache,
-        Options options,
-        DecodeJob.Callback<R> callback) {
+    <R> DecodeJob<R> build(GlideContext glideContext, Object model, EngineKey loadKey, Key signature, int width, int height, Class<?> resourceClass, Class<R> transcodeClass,
+                           Priority priority, DiskCacheStrategy diskCacheStrategy, Map<Class<?>, Transformation<?>> transformations,
+                           boolean isTransformationRequired, boolean isScaleOnlyOrNoTransform, boolean onlyRetrieveFromCache, Options options, DecodeJob.Callback<R> callback) {
       DecodeJob<R> result = Preconditions.checkNotNull((DecodeJob<R>) pool.acquire());
-      return result.init(
-          glideContext,
-          model,
-          loadKey,
-          signature,
-          width,
-          height,
-          resourceClass,
-          transcodeClass,
-          priority,
-          diskCacheStrategy,
-          transformations,
-          isTransformationRequired,
-          isScaleOnlyOrNoTransform,
-          onlyRetrieveFromCache,
-          options,
-          callback,
-          creationOrder++);
+      return result.init(glideContext, model, loadKey, signature, width, height, resourceClass, transcodeClass, priority, diskCacheStrategy,
+              transformations, isTransformationRequired, isScaleOnlyOrNoTransform, onlyRetrieveFromCache, options, callback, creationOrder++);
     }
   }
 

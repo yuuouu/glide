@@ -47,10 +47,9 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 
 /**
- * A generic class that can handle setting options and staring loads for generic resource types.
+ * 一个通用类，可以处理通用资源类型的设置选项和凝视负载。
  *
- * @param <TranscodeType> The type of resource that will be delivered to the {@link
- *     com.bumptech.glide.request.target.Target}.
+ * @param <TranscodeType> 将交付给的资源类型 {@link com.bumptech.glide.request.target.Target}.
  */
 // Public API.
 @SuppressWarnings({"unused", "WeakerAccess"})
@@ -865,8 +864,7 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   // already been loaded. If the previous request isn't complete, we can wait for it to finish
   // because the previous request must also be using skipMemoryCache for the requests to be
   // equivalent. See #2663 for additional context.
-  private boolean isSkipMemoryCacheWithCompletePreviousRequest(
-      BaseRequestOptions<?> options, Request previous) {
+  private boolean isSkipMemoryCacheWithCompletePreviousRequest(BaseRequestOptions<?> options, Request previous) {
     return !options.isMemoryCacheable() && previous.isComplete();
   }
 

@@ -1,5 +1,7 @@
 package com.bumptech.glide.manager;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Lifecycle.Event;
 import androidx.lifecycle.Lifecycle.State;
@@ -49,16 +51,20 @@ final class LifecycleLifecycle implements Lifecycle, LifecycleObserver {
     lifecycleListeners.add(listener);
 
     if (lifecycle.getCurrentState() == State.DESTROYED) {
+      Log.e("yuu", "LifecycleLifecycle addListener: DESTROYED");
       listener.onDestroy();
     } else if (lifecycle.getCurrentState().isAtLeast(State.STARTED)) {
+      Log.e("yuu", "LifecycleLifecycle addListener: STARTED");
       listener.onStart();
     } else {
+      Log.e("yuu", "LifecycleLifecycle addListener: onStop currentState=" + lifecycle.getCurrentState());
       listener.onStop();
     }
   }
 
   @Override
   public void removeListener(@NonNull LifecycleListener listener) {
+    Log.e("yuu", "LifecycleLifecycle removeListener: ");
     lifecycleListeners.remove(listener);
   }
 }

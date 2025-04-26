@@ -7,21 +7,18 @@ import com.bumptech.glide.load.EncodeStrategy;
 public abstract class DiskCacheStrategy {
 
   /**
-   * Caches remote data with both {@link #DATA} and {@link #RESOURCE}, and local data with {@link
-   * #RESOURCE} only.
+   * 使用 {@link #DATA} 和 {@link #RESOURCE} 缓存远程数据，
+   * 仅使用 {@link #RESOURCE} 缓存本地数据。
    */
-  public static final DiskCacheStrategy ALL =
-      new DiskCacheStrategy() {
+  public static final DiskCacheStrategy ALL = new DiskCacheStrategy() {
         @Override
         public boolean isDataCacheable(DataSource dataSource) {
           return dataSource == DataSource.REMOTE;
         }
 
         @Override
-        public boolean isResourceCacheable(
-            boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
-          return dataSource != DataSource.RESOURCE_DISK_CACHE
-              && dataSource != DataSource.MEMORY_CACHE;
+        public boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
+          return dataSource != DataSource.RESOURCE_DISK_CACHE && dataSource != DataSource.MEMORY_CACHE;
         }
 
         @Override
@@ -35,17 +32,17 @@ public abstract class DiskCacheStrategy {
         }
       };
 
-  /** Saves no data to cache. */
-  public static final DiskCacheStrategy NONE =
-      new DiskCacheStrategy() {
+  /**
+   * 不缓存数据
+   */
+  public static final DiskCacheStrategy NONE = new DiskCacheStrategy() {
         @Override
         public boolean isDataCacheable(DataSource dataSource) {
           return false;
         }
 
         @Override
-        public boolean isResourceCacheable(
-            boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
+        public boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
           return false;
         }
 
@@ -60,17 +57,17 @@ public abstract class DiskCacheStrategy {
         }
       };
 
-  /** Writes retrieved data directly to the disk cache before it's decoded. */
-  public static final DiskCacheStrategy DATA =
-      new DiskCacheStrategy() {
+  /**
+   * 在解码之前，将数据直接写到磁盘缓存
+   */
+  public static final DiskCacheStrategy DATA = new DiskCacheStrategy() {
         @Override
         public boolean isDataCacheable(DataSource dataSource) {
           return dataSource != DataSource.DATA_DISK_CACHE && dataSource != DataSource.MEMORY_CACHE;
         }
 
         @Override
-        public boolean isResourceCacheable(
-            boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
+        public boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
           return false;
         }
 
@@ -85,19 +82,18 @@ public abstract class DiskCacheStrategy {
         }
       };
 
-  /** Writes resources to disk after they've been decoded. */
-  public static final DiskCacheStrategy RESOURCE =
-      new DiskCacheStrategy() {
+  /**
+   * 解码后，将资源写入磁盘
+   */
+  public static final DiskCacheStrategy RESOURCE = new DiskCacheStrategy() {
         @Override
         public boolean isDataCacheable(DataSource dataSource) {
           return false;
         }
 
         @Override
-        public boolean isResourceCacheable(
-            boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
-          return dataSource != DataSource.RESOURCE_DISK_CACHE
-              && dataSource != DataSource.MEMORY_CACHE;
+        public boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
+          return dataSource != DataSource.RESOURCE_DISK_CACHE && dataSource != DataSource.MEMORY_CACHE;
         }
 
         @Override
@@ -112,13 +108,10 @@ public abstract class DiskCacheStrategy {
       };
 
   /**
-   * Tries to intelligently choose a strategy based on the data source of the {@link
-   * com.bumptech.glide.load.data.DataFetcher} and the {@link
-   * com.bumptech.glide.load.EncodeStrategy} of the {@link com.bumptech.glide.load.ResourceEncoder}
-   * (if an {@link com.bumptech.glide.load.ResourceEncoder} is available).
+   * 尝试根据 {@link com.bumptech.glide.load.data.DataFetcher} 的数据源和 {@link com.bumptech.glide.load.ResourceEncoder} 的
+   * {@link com.bumptech.glide.load.EncodeStrategy}（如果有 {@link com.bumptech.glide.load.ResourceEncoder} 可用）智能地选择策略。
    */
-  public static final DiskCacheStrategy AUTOMATIC =
-      new DiskCacheStrategy() {
+  public static final DiskCacheStrategy AUTOMATIC = new DiskCacheStrategy() {
         @Override
         public boolean isDataCacheable(DataSource dataSource) {
           return dataSource == DataSource.REMOTE;
@@ -126,11 +119,8 @@ public abstract class DiskCacheStrategy {
 
         @SuppressWarnings("checkstyle:UnnecessaryParentheses") // Readability
         @Override
-        public boolean isResourceCacheable(
-            boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
-          return ((isFromAlternateCacheKey && dataSource == DataSource.DATA_DISK_CACHE)
-                  || dataSource == DataSource.LOCAL)
-              && encodeStrategy == EncodeStrategy.TRANSFORMED;
+        public boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy) {
+          return ((isFromAlternateCacheKey && dataSource == DataSource.DATA_DISK_CACHE) || dataSource == DataSource.LOCAL) && encodeStrategy == EncodeStrategy.TRANSFORMED;
         }
 
         @Override
@@ -145,28 +135,27 @@ public abstract class DiskCacheStrategy {
       };
 
   /**
-   * Returns true if this request should cache the original unmodified data.
+   * 如果此请求应缓存原始未修改的数据，则返回 true。
    *
-   * @param dataSource Indicates where the data was originally retrieved.
+   * @param dataSource 指示最初检索数据的位置。
    */
   public abstract boolean isDataCacheable(DataSource dataSource);
 
   /**
-   * Returns true if this request should cache the final transformed resource.
-   *
-   * @param isFromAlternateCacheKey {@code true} if the resource we've decoded was loaded using an
-   *     alternative, rather than the primary, cache key.
-   * @param dataSource Indicates where the data used to decode the resource was originally
-   *     retrieved.
-   * @param encodeStrategy The {@link EncodeStrategy} the {@link
-   *     com.bumptech.glide.load.ResourceEncoder} will use to encode the resource.
+   * 如果此请求应缓存最终转换后的资源，则返回 true。
+   * @param isFromAlternateCacheKey {@code true} 如果我们解码的资源是使用备用缓存键（而非主缓存键）加载的。
+   * @param dataSource 指示用于解码资源的数据最初在哪里获取。
+   * @param encodeStrategy {@link com.bumptech.glide.load.ResourceEncoder} 将使用 {@link EncodeStrategy} 对资源进行编码。
    */
-  public abstract boolean isResourceCacheable(
-      boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy);
+  public abstract boolean isResourceCacheable(boolean isFromAlternateCacheKey, DataSource dataSource, EncodeStrategy encodeStrategy);
 
-  /** Returns true if this request should attempt to decode cached resource data. */
+  /**
+   *  如果此请求应尝试解码缓存的资源数据，则返回为 true
+   */
   public abstract boolean decodeCachedResource();
 
-  /** Returns true if this request should attempt to decode cached source data. */
+  /**
+   * 如果此请求应尝试解码缓存的源数据，则返回 true
+   */
   public abstract boolean decodeCachedData();
 }

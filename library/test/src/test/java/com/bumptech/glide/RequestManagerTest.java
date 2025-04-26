@@ -86,14 +86,7 @@ public class RequestManagerTest {
         };
 
     requestTracker = mock(RequestTracker.class);
-    manager =
-        new RequestManager(
-            Glide.get(ApplicationProvider.getApplicationContext()),
-            lifecycle,
-            treeNode,
-            requestTracker,
-            factory,
-            context);
+    manager = new RequestManager(Glide.get(ApplicationProvider.getApplicationContext()), lifecycle, treeNode, requestTracker, factory, context);
   }
 
   @Test

@@ -29,22 +29,12 @@ final class LifecycleRequestManagerRetriever {
     return lifecycleToRequestManager.get(lifecycle);
   }
 
-  RequestManager getOrCreate(
-      Context context,
-      Glide glide,
-      final Lifecycle lifecycle,
-      FragmentManager childFragmentManager,
-      boolean isParentVisible) {
+  RequestManager getOrCreate(Context context, Glide glide, final Lifecycle lifecycle, FragmentManager childFragmentManager, boolean isParentVisible) {
     Util.assertMainThread();
     RequestManager result = getOnly(lifecycle);
     if (result == null) {
       LifecycleLifecycle glideLifecycle = new LifecycleLifecycle(lifecycle);
-      result =
-          factory.build(
-              glide,
-              glideLifecycle,
-              new SupportRequestManagerTreeNode(childFragmentManager),
-              context);
+      result = factory.build(glide, glideLifecycle, new SupportRequestManagerTreeNode(childFragmentManager), context);
       lifecycleToRequestManager.put(lifecycle, result);
       glideLifecycle.addListener(
           new LifecycleListener() {
@@ -62,6 +52,8 @@ final class LifecycleRequestManagerRetriever {
       // This is a bit of hack, we're going to start the RequestManager, but not the
       // corresponding Lifecycle. It's safe to start the RequestManager, but starting the
       // Lifecycle might trigger memory leaks. See b/154405040
+      // 这有点 hack ，我们会启动 RequestManager，但不会启动相应的 Lifecycle。
+      // 启动 RequestManager 是安全的，但启动 Lifecycle 可能会引发内存泄漏。请参阅 b/154405040
       if (isParentVisible) {
         result.onStart();
       }

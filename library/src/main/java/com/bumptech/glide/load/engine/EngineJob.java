@@ -127,8 +127,7 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
 
   public synchronized void start(DecodeJob<R> decodeJob) {
     this.decodeJob = decodeJob;
-    GlideExecutor executor =
-        decodeJob.willDecodeFromCache() ? diskCacheExecutor : getActiveSourceExecutor();
+    GlideExecutor executor = decodeJob.willDecodeFromCache() ? diskCacheExecutor : getActiveSourceExecutor();
     executor.execute(decodeJob);
   }
 
@@ -193,9 +192,7 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
   }
 
   private GlideExecutor getActiveSourceExecutor() {
-    return useUnlimitedSourceGeneratorPool
-        ? sourceUnlimitedExecutor
-        : (useAnimationPool ? animationExecutor : sourceExecutor);
+    return useUnlimitedSourceGeneratorPool ? sourceUnlimitedExecutor : (useAnimationPool ? animationExecutor : sourceExecutor);
   }
 
   // Exposed for testing.
