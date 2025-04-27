@@ -13,9 +13,8 @@ class ResourceRecycler {
 
   synchronized void recycle(Resource<?> resource, boolean forceNextFrame) {
     if (isRecycling || forceNextFrame) {
-      // If a resource has sub-resources, releasing a sub resource can cause it's parent to be
-      // synchronously evicted which leads to a recycle loop when the parent releases it's children.
-      // Posting breaks this loop.
+      // 如果某个资源包含子资源，则释放子资源可能会导致其父资源被同步驱逐，从而导致在父资源释放其子资源时出现循环回收。
+      // 发布操作可打破此循环。
       handler.obtainMessage(ResourceRecyclerCallback.RECYCLE_RESOURCE, resource).sendToTarget();
     } else {
       isRecycling = true;

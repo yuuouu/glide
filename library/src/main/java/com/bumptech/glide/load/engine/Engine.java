@@ -155,6 +155,11 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       boolean onlyRetrieveFromCache, ResourceCallback cb, Executor callbackExecutor) {
     long startTime = VERBOSE_IS_LOGGABLE ? LogTime.getLogTime() : 0;
 
+    /**
+     * 重点！！
+     * key 是通过 {@link EngineKeyFactory#buildKey(Object, Key, int, int, Map, Class, Class, Options)} 创建的。
+     * 实际为该对象的 {@link EngineKey#hashCode()}
+     */
     EngineKey key = keyFactory.buildKey(model, signature, width, height, transformations, resourceClass, transcodeClass, options);
 
     EngineResource<?> memoryResource;
@@ -170,35 +175,16 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       }
     }
 
-    // Avoid calling back while holding the engine lock, doing so makes it easier for callers to
-    // deadlock.
+    // 避免在持有引擎锁的情况下回调，否则调用者更容易
+    // 死锁
     cb.onResourceReady(memoryResource, DataSource.MEMORY_CACHE, /* isLoadedFromAlternateCacheKey= */ false);
     return null;
   }
 
-  private <R> LoadStatus waitForExistingOrStartNewJob(
-      GlideContext glideContext,
-      Object model,
-      Key signature,
-      int width,
-      int height,
-      Class<?> resourceClass,
-      Class<R> transcodeClass,
-      Priority priority,
-      DiskCacheStrategy diskCacheStrategy,
-      Map<Class<?>, Transformation<?>> transformations,
-      boolean isTransformationRequired,
-      boolean isScaleOnlyOrNoTransform,
-      Options options,
-      boolean isMemoryCacheable,
-      boolean useUnlimitedSourceExecutorPool,
-      boolean useAnimationPool,
-      boolean onlyRetrieveFromCache,
-      ResourceCallback cb,
-      Executor callbackExecutor,
-      EngineKey key,
-      long startTime) {
-
+  private <R> LoadStatus waitForExistingOrStartNewJob(GlideContext glideContext, Object model, Key signature, int width, int height, Class<?> resourceClass,
+      Class<R> transcodeClass, Priority priority, DiskCacheStrategy diskCacheStrategy, Map<Class<?>, Transformation<?>> transformations,
+      boolean isTransformationRequired, boolean isScaleOnlyOrNoTransform, Options options, boolean isMemoryCacheable, boolean useUnlimitedSourceExecutorPool,
+      boolean useAnimationPool, boolean onlyRetrieveFromCache, ResourceCallback cb, Executor callbackExecutor, EngineKey key, long startTime) {
     EngineJob<?> current = jobs.get(key, onlyRetrieveFromCache);
     if (current != null) {
       current.addCallback(cb, callbackExecutor);
@@ -207,39 +193,13 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       }
       return new LoadStatus(cb, current);
     }
-
-    EngineJob<R> engineJob =
-        engineJobFactory.build(
-            key,
-            isMemoryCacheable,
-            useUnlimitedSourceExecutorPool,
-            useAnimationPool,
-            onlyRetrieveFromCache);
-
-    DecodeJob<R> decodeJob =
-        decodeJobFactory.build(
-            glideContext,
-            model,
-            key,
-            signature,
-            width,
-            height,
-            resourceClass,
-            transcodeClass,
-            priority,
-            diskCacheStrategy,
-            transformations,
-            isTransformationRequired,
-            isScaleOnlyOrNoTransform,
-            onlyRetrieveFromCache,
-            options,
-            engineJob);
+    EngineJob<R> engineJob = engineJobFactory.build(key, isMemoryCacheable, useUnlimitedSourceExecutorPool, useAnimationPool, onlyRetrieveFromCache);
+    DecodeJob<R> decodeJob = decodeJobFactory.build(glideContext, model, key, signature, width, height, resourceClass, transcodeClass, priority,
+            diskCacheStrategy, transformations, isTransformationRequired, isScaleOnlyOrNoTransform, onlyRetrieveFromCache, options, engineJob);
 
     jobs.put(key, engineJob);
-
     engineJob.addCallback(cb, callbackExecutor);
     engineJob.start(decodeJob);
-
     if (VERBOSE_IS_LOGGABLE) {
       logWithTimeAndKey("Started new load", startTime, key);
     }

@@ -3,14 +3,13 @@ package com.bumptech.glide;
 /** An enum for dynamically modifying the amount of memory Glide is able to use. */
 public enum MemoryCategory {
   /**
-   * Tells Glide's memory cache and bitmap pool to use at most half of their initial maximum size.
+   * 内存缓存和位图池最多使用其初始最大大小的一半
    */
   LOW(0.5f),
-  /** Tells Glide's memory cache and bitmap pool to use at most their initial maximum size. */
+  /** 内存缓存和位图池最多使用其初始最大大小 */
   NORMAL(1f),
   /**
-   * Tells Glide's memory cache and bitmap pool to use at most one and a half times their initial
-   * maximum size.
+   * 内存缓存和位图池最多使用其初始最大大小的 1.5 倍
    */
   HIGH(1.5f);
 
@@ -21,8 +20,7 @@ public enum MemoryCategory {
   }
 
   /**
-   * Returns the multiplier that should be applied to the initial maximum size of Glide's memory
-   * cache and bitmap pool.
+   * 返回应应用于 Glide 内存缓存和位图池的初始最大大小的乘数
    */
   public float getMultiplier() {
     return multiplier;

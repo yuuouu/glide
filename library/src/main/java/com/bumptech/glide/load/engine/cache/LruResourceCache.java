@@ -45,14 +45,10 @@ public class LruResourceCache extends LruCache<Key, Resource<?>> implements Memo
   @Override
   public void trimMemory(int level) {
     if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
-      // Entering list of cached background apps
-      // Evict our entire bitmap cache
+      // 进入缓存的后台应用程序列表，清除全部磁盘缓存
       clearMemory();
-    } else if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN
-        || level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
-      // The app's UI is no longer visible, or app is in the foreground but system is running
-      // critically low on memory
-      // Evict oldest half of our bitmap cache
+    } else if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN || level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+      // 应用程序的 UI 不再可见，或者应用程序在前台运行，但系统内存严重不足，将磁盘缓存缩减一半
       trimToSize(getMaxSize() / 2);
     }
   }

@@ -2,10 +2,10 @@ package com.bumptech.glide.util;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import com.bumptech.glide.load.engine.Resource;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.w3c.dom.Node;
 
 /**
  * A general purpose size limited cache that evicts items using an LRU algorithm. By default every
@@ -16,7 +16,8 @@ import org.w3c.dom.Node;
  * @param <Y> The type of the values.
  */
 public class LruCache<T, Y> {
-  private final Map<T, Entry<Y>> cache = new LinkedHashMap<>(100, 0.75f, true);
+  // accessOrder 为 true 时是按照访问顺序（get/put）排列
+  private final Map<T, Entry<Y>> cache = new LinkedHashMap<>(100, 0.75f, /*accessOrder=*/ true);
   private final long initialMaxSize;
   private long maxSize;
   private long currentSize;
@@ -33,10 +34,10 @@ public class LruCache<T, Y> {
   }
 
   /**
-   * Sets a size multiplier that will be applied to the size provided in the constructor to put the
-   * new size of the cache. If the new size is less than the current size, entries will be evicted
-   * until the current size is less than or equal to the new size.
-   *
+   * 设置一个大小乘数，该乘数将应用于构造函数中提供的大小，以设置缓存的新大小。
+   * 如果新大小小于当前大小，则条目将被逐出，直到当前大小小于或等于新大小。
+   * <br>
+   * 只在测试数据中使用
    * @param multiplier The multiplier to apply.
    */
   public synchronized void setSizeMultiplier(float multiplier) {
@@ -48,9 +49,8 @@ public class LruCache<T, Y> {
   }
 
   /**
-   * Returns the size of a given item, defaulting to one. The units must match those used in the
-   * size passed in to the constructor. Subclasses can override this method to return sizes in
-   * various units, usually bytes.
+   * 返回指定项目的大小，默认为 1。单位必须与构造函数中传入的 size 单位一致。
+   * 子类可以重写此方法，以各种单位（通常为字节）返回大小。
    *
    * @param item The item to get the size of.
    */
@@ -64,21 +64,22 @@ public class LruCache<T, Y> {
   }
 
   /**
-   * A callback called whenever an item is evicted from the cache. Subclasses can override.
+   * 每当缓存中的某个项目被移除时，都会调用此回调函数。子类可以重写此回调函数。
    *
    * @param key The key of the evicted item.
    * @param item The evicted item.
+   * @see com.bumptech.glide.load.engine.ResourceRecycler#recycle(Resource, boolean)
    */
   protected void onItemEvicted(@NonNull T key, @Nullable Y item) {
     // optional override
   }
 
-  /** Returns the current maximum size of the cache in bytes. */
+  /** 返回缓存的当前最大值（以字节为单位） */
   public synchronized long getMaxSize() {
     return maxSize;
   }
 
-  /** Returns the sum of the sizes of all items in the cache. */
+  /** 返回缓存中所有项目的大小总和。 */
   public synchronized long getCurrentSize() {
     return currentSize;
   }
@@ -99,35 +100,24 @@ public class LruCache<T, Y> {
    *
    * @param key The key to check.
    * @see LinkedHashMap#get(Object)
-   * @see LinkedHashMap#afterNodeAccess()
    */
   @Nullable
   public synchronized Y get(@NonNull T key) {
-    // 这里调用
+    // 这里调用 LinkedHashMap.get 方法，然后会调用 afterNodeAccess() 方法，将节点放到最前面
     Entry<Y> entry = cache.get(key);
     return entry != null ? entry.value : null;
   }
 
   /**
-   * Adds the given item to the cache with the given key and returns any previous entry for the
-   * given key that may have already been in the cache.
+   * 使用给定的键将给定项添加到缓存中，并返回给定键可能已存在于缓存中的任何先前条目。
+   * <p>如果项的大小大于缓存的总大小，则不会将其添加到缓存中，而是使用给定的键和项同步调用 {@link #onItemEvicted(Object, Object)}
    *
-   * <p>If the size of the item is larger than the total cache size, the item will not be added to
-   * the cache and instead {@link #onItemEvicted(Object, Object)} will be called synchronously with
-   * the given key and item.
+   * <p>项的大小通过 {@link #getSize(Object)} 获取实际字节大小。
+   * 为了避免该方法在不同时间调用同一对象时返回不同值的错误，大小值将在 put 中获取并保留，直到项被逐出、替换或移除。
    *
-   * <p>The size of the item is determined by the {@link #getSize(Object)} method. To avoid errors
-   * where {@link #getSize(Object)} returns different values for the same object when called at
-   * different times, the size value is acquired in {@code put} and retained until the item is
-   * evicted, replaced or removed.
-   *
-   * <p>If {@code item} is null the behavior here is a little odd. For the most part it's similar to
-   * simply calling {@link #remove(Object)} with the given key. The difference is that calling this
-   * method with a null {@code item} will result in an entry remaining in the cache with a null
-   * value and 0 size. The only real consequence is that at some point {@link #onItemEvicted(Object,
-   * Object)} may be called with the given {@code key} and a null value. Ideally we'd make calling
-   * this method with a null {@code item} identical to {@link #remove(Object)} but we're preserving
-   * this odd behavior to match older versions :(.
+   * <p>如果项为 null，此处的行为会有些奇怪。在大多数情况下，它类似于使用给定的键简单地调用 {@link #remove(Object)}。区别在于，
+   * 使用 null 项调用此方法将导致缓存中保留一个值为 null 且大小为 0 的条目。唯一的实际后果是，在某些时候可能会使用给定的键和 null 值调用 {@link #onItemEvicted(Object, Object)}
+   * 理想情况下，我们应该使用 null 项调用此方法，使其与 {@link #remove(Object)}完全相同，但我们保留了这种奇怪的行为以兼容旧版本 :(
    *
    * @param key The key to add the item at.
    * @param item The item to add.
@@ -136,28 +126,36 @@ public class LruCache<T, Y> {
   public synchronized Y put(@NonNull T key, @Nullable Y item) {
     final int itemSize = getSize(item);
     if (itemSize >= maxSize) {
-      //
+      /**
+       * 如果当前项的字节数大于可用缓存最大值，则不进行缓存
+       * @see com.bumptech.glide.load.engine.cache.LruResourceCache#getSize(Resource)
+       */
       onItemEvicted(key, item);
       return null;
     }
-
     if (item != null) {
       currentSize += itemSize;
     }
-    // 1.调用LinkedHashMap.put 实际是 HashMap.put
+    /**
+     * 调用 LinkedHashMap.put，因为没有重写，所有调用的实际是 HashMap.put
+     *
+     * @see java.util.HashMap#put(Object, Object)
+     */
     @Nullable Entry<Y> old = cache.put(key, item == null ? null : new Entry<>(item, itemSize));
     if (old != null) {
-      // 如果之前的key对应的value不为空，则将currentSize减1（默认itemSize为1）
+      // 在内存缓存中存在该资源，则减去旧item占用的字节数
       currentSize -= old.size;
-
       if (!old.value.equals(item)) {
+        /**
+         * 如果旧item和当前item的资源不是同一个，则清除旧资源
+         * 在使用 EngineKey 时几乎不可能出现这种情况吧。但如果 key 没有实现 hashCode/equals 的话就会大概率出现
+         * https://chatgpt.com/share/680e44ca-a410-800c-9fc2-5d44383f5e6f
+         */
         onItemEvicted(key, old.value);
       }
     }
-
-    // 2.去判断内存是不是满了，满了的话要删除最近未使用的元素
+    // 去判断内存是不是满了，满了的话要删除最近未使用的元素
     evict();
-
     return old != null ? old.value : null;
   }
 
@@ -176,14 +174,13 @@ public class LruCache<T, Y> {
     return entry.value;
   }
 
-  /** Clears all items in the cache. */
+  /** 清除缓存中的所有项目 */
   public void clearMemory() {
     trimToSize(0);
   }
 
   /**
-   * Removes the least recently used items from the cache until the current size is less than the
-   * given size.
+   * 从缓存中删除最近最少使用的项目，直到当前大小小于给定大小
    *
    * @param size The size the cache should be less than.
    */
@@ -191,12 +188,16 @@ public class LruCache<T, Y> {
     Map.Entry<T, Entry<Y>> last;
     Iterator<Map.Entry<T, Entry<Y>>> cacheIterator;
     while (currentSize > size) {
+      // LinkedHashMap默认的访问顺序模式，最近最少使用的元素排在最前面
       cacheIterator = cache.entrySet().iterator();
+      // 拿到最久未访问的元素
       last = cacheIterator.next();
       final Entry<Y> toRemove = last.getValue();
       currentSize -= toRemove.size;
+      // 移除该引用
       final T key = last.getKey();
       cacheIterator.remove();
+      // 返回接口，去回收实际内存
       onItemEvicted(key, toRemove.value);
     }
   }
