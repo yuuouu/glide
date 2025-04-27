@@ -149,66 +149,24 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
    * @param height The target height in pixels of the desired resource.
    * @param cb The callback that will be called when the load completes.
    */
-  public <R> LoadStatus load(
-      GlideContext glideContext,
-      Object model,
-      Key signature,
-      int width,
-      int height,
-      Class<?> resourceClass,
-      Class<R> transcodeClass,
-      Priority priority,
-      DiskCacheStrategy diskCacheStrategy,
-      Map<Class<?>, Transformation<?>> transformations,
-      boolean isTransformationRequired,
-      boolean isScaleOnlyOrNoTransform,
-      Options options,
-      boolean isMemoryCacheable,
-      boolean useUnlimitedSourceExecutorPool,
-      boolean useAnimationPool,
-      boolean onlyRetrieveFromCache,
-      ResourceCallback cb,
-      Executor callbackExecutor) {
+  public <R> LoadStatus load(GlideContext glideContext, Object model, Key signature, int width, int height, Class<?> resourceClass, Class<R> transcodeClass,
+      Priority priority, DiskCacheStrategy diskCacheStrategy, Map<Class<?>, Transformation<?>> transformations, boolean isTransformationRequired,
+      boolean isScaleOnlyOrNoTransform, Options options, boolean isMemoryCacheable, boolean useUnlimitedSourceExecutorPool, boolean useAnimationPool,
+      boolean onlyRetrieveFromCache, ResourceCallback cb, Executor callbackExecutor) {
     long startTime = VERBOSE_IS_LOGGABLE ? LogTime.getLogTime() : 0;
 
-    EngineKey key =
-        keyFactory.buildKey(
-            model,
-            signature,
-            width,
-            height,
-            transformations,
-            resourceClass,
-            transcodeClass,
-            options);
+    EngineKey key = keyFactory.buildKey(model, signature, width, height, transformations, resourceClass, transcodeClass, options);
 
     EngineResource<?> memoryResource;
     synchronized (this) {
+      // 缓存加载图片的入口
       memoryResource = loadFromMemory(key, isMemoryCacheable, startTime);
 
       if (memoryResource == null) {
-        return waitForExistingOrStartNewJob(
-            glideContext,
-            model,
-            signature,
-            width,
-            height,
-            resourceClass,
-            transcodeClass,
-            priority,
-            diskCacheStrategy,
-            transformations,
-            isTransformationRequired,
-            isScaleOnlyOrNoTransform,
-            options,
-            isMemoryCacheable,
-            useUnlimitedSourceExecutorPool,
-            useAnimationPool,
-            onlyRetrieveFromCache,
-            cb,
-            callbackExecutor,
-            key,
-            startTime);
+        // 如果缓存为空，则启动一个线程去加载图片
+        return waitForExistingOrStartNewJob(glideContext, model, signature, width, height, resourceClass, transcodeClass, priority, diskCacheStrategy,
+            transformations, isTransformationRequired, isScaleOnlyOrNoTransform, options, isMemoryCacheable, useUnlimitedSourceExecutorPool,
+            useAnimationPool, onlyRetrieveFromCache, cb, callbackExecutor, key, startTime);
       }
     }
 
@@ -289,12 +247,12 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
   }
 
   @Nullable
-  private EngineResource<?> loadFromMemory(
-      EngineKey key, boolean isMemoryCacheable, long startTime) {
+  private EngineResource<?> loadFromMemory(EngineKey key, boolean isMemoryCacheable, long startTime) {
     if (!isMemoryCacheable) {
       return null;
     }
 
+    // 从活动内存中加载图片资源
     EngineResource<?> active = loadFromActiveResources(key);
     if (active != null) {
       if (VERBOSE_IS_LOGGABLE) {
@@ -303,6 +261,7 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       return active;
     }
 
+    // 从内存缓存中加载图片资源
     EngineResource<?> cached = loadFromCache(key);
     if (cached != null) {
       if (VERBOSE_IS_LOGGABLE) {
@@ -322,38 +281,35 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
   private EngineResource<?> loadFromActiveResources(Key key) {
     EngineResource<?> active = activeResources.get(key);
     if (active != null) {
+      // 命中活动缓存时，增加引用计数
       active.acquire();
     }
-
     return active;
   }
 
   private EngineResource<?> loadFromCache(Key key) {
     EngineResource<?> cached = getEngineResourceFromCache(key);
     if (cached != null) {
+      // 命中内存缓存时，增加引用计数
       cached.acquire();
+      // 并将其放入活动内存中
       activeResources.activate(key, cached);
     }
     return cached;
   }
 
   private EngineResource<?> getEngineResourceFromCache(Key key) {
+    // 命中内存缓存时，从内存缓存中获取图片资源后移除
     Resource<?> cached = cache.remove(key);
 
     final EngineResource<?> result;
     if (cached == null) {
       result = null;
     } else if (cached instanceof EngineResource) {
-      // Save an object allocation if we've cached an EngineResource (the typical case).
+      // 保存对象分配，如果命中 EngineResource (典型情况)
       result = (EngineResource<?>) cached;
     } else {
-      result =
-          new EngineResource<>(
-              cached,
-              /* isMemoryCacheable= */ true,
-              /* isRecyclable= */ true,
-              key,
-              /* listener= */ this);
+      result = new EngineResource<>(cached,/* isMemoryCacheable= */ true,/* isRecyclable= */ true, key,/* listener= */ this);
     }
     return result;
   }
@@ -368,9 +324,8 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
 
   @SuppressWarnings("unchecked")
   @Override
-  public synchronized void onEngineJobComplete(
-      EngineJob<?> engineJob, Key key, EngineResource<?> resource) {
-    // A null resource indicates that the load failed, usually due to an exception.
+  public synchronized void onEngineJobComplete(EngineJob<?> engineJob, Key key, EngineResource<?> resource) {
+    // 无效资源表明负载失败，通常是由于例外
     if (resource != null && resource.isMemoryCacheable()) {
       activeResources.activate(key, resource);
     }

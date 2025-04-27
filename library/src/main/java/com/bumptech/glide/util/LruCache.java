@@ -5,6 +5,7 @@ import androidx.annotation.Nullable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.w3c.dom.Node;
 
 /**
  * A general purpose size limited cache that evicts items using an LRU algorithm. By default every
@@ -92,12 +93,17 @@ public class LruCache<T, Y> {
   }
 
   /**
-   * Returns the item in the cache for the given key or null if no such item exists.
+   * 如果不存在此类项目，则将其返回给定键或空的项目中的项目
+   * <br>
+   * LinkedHashMap.get() 中有一个 afterNodeAccess() 方法，用于将节点放到最前面
    *
    * @param key The key to check.
+   * @see LinkedHashMap#get(Object)
+   * @see LinkedHashMap#afterNodeAccess()
    */
   @Nullable
   public synchronized Y get(@NonNull T key) {
+    // 这里调用
     Entry<Y> entry = cache.get(key);
     return entry != null ? entry.value : null;
   }
@@ -130,6 +136,7 @@ public class LruCache<T, Y> {
   public synchronized Y put(@NonNull T key, @Nullable Y item) {
     final int itemSize = getSize(item);
     if (itemSize >= maxSize) {
+      //
       onItemEvicted(key, item);
       return null;
     }
@@ -137,14 +144,18 @@ public class LruCache<T, Y> {
     if (item != null) {
       currentSize += itemSize;
     }
+    // 1.调用LinkedHashMap.put 实际是 HashMap.put
     @Nullable Entry<Y> old = cache.put(key, item == null ? null : new Entry<>(item, itemSize));
     if (old != null) {
+      // 如果之前的key对应的value不为空，则将currentSize减1（默认itemSize为1）
       currentSize -= old.size;
 
       if (!old.value.equals(item)) {
         onItemEvicted(key, old.value);
       }
     }
+
+    // 2.去判断内存是不是满了，满了的话要删除最近未使用的元素
     evict();
 
     return old != null ? old.value : null;

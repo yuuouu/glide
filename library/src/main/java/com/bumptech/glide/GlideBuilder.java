@@ -405,6 +405,20 @@ public final class GlideBuilder {
    *
    * @return This builder.
    */
+  /**
+   * <p>如果设置为 true，则允许 Glide 重新捕获已加载到 Target 中的资源，这些资源随后会被取消引用并进行垃圾回收，而不会被清除。
+   * 默认为 false。
+   * <p>Glide 的资源复用系统是宽松的，这意味着调用者可以将资源加载到 Target 中，然后从不清除 Target。为此，Glide 使用 java.lang.ref.WeakReferences 来跟踪属于尚未清除 Target 的资源。
+   * 将此方法设置为 true 还允许 Glide 维护对底层资源的硬引用，这样如果 Target 被垃圾回收，Glide 可以将底层资源返回到其内存缓存中，这样后续请求就不会意外地从磁盘或源重新加载该资源。
+   * 但另一方面，由于系统必须在移除硬引用之前清除并处理弱引用，因此系统对底层资源进行垃圾回收所需的时间会略长。因此，将此方法设置为 true 可能会暂时增加应用程序的内存使用量。
+   * <p>将此方法保留为默认值 false 将允许平台更快地对资源进行垃圾回收，但如果调用者将资源加载到 Target 中但从未清除它们，则会导致意外的内存缓存未命中。
+   * <p>如果将此方法设置为 true，则不得调用 Bitmap.recycle() 或改变 Glide 返回的任何 Bitmap。如果将此方法设置为 false，回收或改变 Bitmap 效率低下，
+   * 但只要不清除用于加载 Bitmap 的相应 Target，则是安全的。但是，如果将此方法设置为 true 并回收或改变任何返回的 Bitmap 或其他可变资源，Glide 可能会恢复这些资源并尝试稍后使用它们，
+   * 从而导致崩溃、图形损坏或未定义的行为。
+   * <p>无论将此方法设置为什么值，在使用完相应资源后清除 Target 始终是一个好习惯。清除 Target 可使 Glide 最大限度地重复使用资源、最大限度地减少内存开销并最大限度地减少由边缘情况导致的意外行为。如果您使用 RequestManager.clear(Target)，调用 Bitmap. recycle() 或修改 Bitmap 不仅不安全，而且完全没有必要，应该避免。在所有情况下，优先使用 RequestManager.clear(Target) 而不是 Bitmap.recycle()。
+   * 返回：
+   * 此构建器。
+   */
   // Public API.
   @SuppressWarnings("unused")
   @NonNull
