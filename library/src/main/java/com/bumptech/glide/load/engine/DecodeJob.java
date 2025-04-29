@@ -17,6 +17,7 @@ import com.bumptech.glide.load.data.DataFetcher;
 import com.bumptech.glide.load.data.DataRewinder;
 import com.bumptech.glide.load.engine.cache.DiskCache;
 import com.bumptech.glide.load.resource.bitmap.Downsampler;
+import com.bumptech.glide.request.BaseRequestOptions;
 import com.bumptech.glide.util.LogTime;
 import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.pool.FactoryPools.Poolable;
@@ -40,6 +41,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
 
   private final DecodeHelper<R> decodeHelper = new DecodeHelper<>();
   private final List<Throwable> throwables = new ArrayList<>();
+  // 状态管理器，防止DecodeJob在无效状态下继续执行
   private final StateVerifier stateVerifier = StateVerifier.newInstance();
   private final DiskCacheProvider diskCacheProvider;
   private final Pools.Pool<DecodeJob<?>> pool;
@@ -48,17 +50,30 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
 
   private GlideContext glideContext;
   private Key signature;
+
+  //任务优先级，直接影响线程池内调度顺序
   private Priority priority;
   private EngineKey loadKey;
   private int width;
   private int height;
   private DiskCacheStrategy diskCacheStrategy;
+  /**
+   * 资源解码相关的选项参数集合，包括解码格式、缩放参数、缓存策略等.
+   *
+   * @see BaseRequestOptions#apply(BaseRequestOptions)
+   */
   private Options options;
   private Callback<R> callback;
   private int order;
   private Stage stage;
   private RunReason runReason;
   private long startFetchTime;
+  /**
+   * 是否允许只从缓存中加载。如果为true，遇到需要联网或其他源加载直接失败。
+   * 在外部通过 RequestOptions.onlyRetrieveFromCache() 配置
+   *
+   * @see BaseRequestOptions#onlyRetrieveFromCache(boolean)
+   */
   private boolean onlyRetrieveFromCache;
   private Object model;
 
@@ -68,7 +83,10 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
   private Object currentData;
   private DataSource currentDataSource;
   private DataFetcher<?> currentFetcher;
-
+  /**
+   * 核心调度器，来切换不同阶段对应的 DataFetcherGenerator。
+   * 比如磁盘缓存、资源缓存、源数据等阶段。
+   */
   private volatile DataFetcherGenerator currentGenerator;
   private volatile boolean isCallbackNotified;
   private volatile boolean isCancelled;
@@ -129,8 +147,8 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
   }
 
   /**
-   * Returns true if this job will attempt to decode a resource from the disk cache, and false if it
-   * will always decode from source.
+   * 如果此作业尝试从磁盘缓存中解码资源，则返回 true；
+   * 如果它始终从源解码，则返回 false。
    */
   boolean willDecodeFromCache() {
     Stage firstStage = getNextStage(Stage.INITIALIZE);
@@ -241,10 +259,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
       // loads to silently hang forever, a case that's especially bad for users using Futures on
       // background threads.
       if (Log.isLoggable(TAG, Log.DEBUG)) {
-        Log.d(
-            TAG,
-            "DecodeJob threw unexpectedly" + ", isCancelled: " + isCancelled + ", stage: " + stage,
-            t);
+        Log.d(TAG, "DecodeJob threw unexpectedly" + ", isCancelled: " + isCancelled + ", stage: " + stage, t);
       }
       // When we're encoding we've already notified our callback and it isn't safe to do so again.
       if (stage != Stage.ENCODE) {
@@ -283,6 +298,48 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     }
   }
 
+  /**
+   * 状态机核心只有两个，状态（State）和事件(Event)。当前传入事件下应该做什么动作取决于当前的状态，这里是将状态当成事件传了进来。
+   * <br>
+   * INITIALIZE 状态下的结果推演
+   * <p>
+   * decodeCachedResource=true
+   * <br>
+   * getNextStage(): INITIALIZE -> Stage.RESOURCE_CACHE
+   * <br>
+   * getNextGenerator(): return new ResourceCacheGenerator(decodeHelper, this);
+   *
+   * <p>
+   * decodeCachedResource=false and  decodeCachedData=true
+   * <br>
+   * getNextStage(): INITIALIZE -> Stage.RESOURCE_CACHE -> return Stage.DATA_CACHE
+   * <br>
+   * getNextGenerator(): return new DataCacheGenerator(decodeHelper, this);
+   *
+   * <p>
+   * decodeCachedResource=false and  decodeCachedData=false
+   * <br>
+   * getNextStage(): INITIALIZE -> RESOURCE_CACHE -> DATA_CACHE  -> return onlyRetrieveFromCache ? Stage.FINISHED : Stage.SOURCE
+   * <br>
+   * getNextGenerator(): return new SourceGenerator(decodeHelper, this) : null
+   */
+  private Stage getNextStage(Stage current) {
+    switch (current) {
+      case INITIALIZE:
+        return diskCacheStrategy.decodeCachedResource() ? Stage.RESOURCE_CACHE : getNextStage(Stage.RESOURCE_CACHE);
+      case RESOURCE_CACHE:
+        return diskCacheStrategy.decodeCachedData() ? Stage.DATA_CACHE : getNextStage(Stage.DATA_CACHE);
+      case DATA_CACHE:
+        // 如果用户选择仅从缓存中检索资源，则跳过源
+        return onlyRetrieveFromCache ? Stage.FINISHED : Stage.SOURCE;
+      case SOURCE:
+      case FINISHED:
+        return Stage.FINISHED;
+      default:
+        throw new IllegalArgumentException("Unrecognized stage: " + current);
+    }
+  }
+
   private DataFetcherGenerator getNextGenerator() {
     switch (stage) {
       case RESOURCE_CACHE:
@@ -302,9 +359,10 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     currentThread = Thread.currentThread();
     startFetchTime = LogTime.getLogTime();
     boolean isStarted = false;
-    while (!isCancelled
-        && currentGenerator != null
-        && !(isStarted = currentGenerator.startNext())) {
+    while (!isCancelled                                 // 1. 请求没有被取消
+        && currentGenerator != null                     // 2. 当前存在调度器 generator
+        && !(isStarted = currentGenerator.startNext())  // 3. 当前调度器没有成功启动任务
+    ) {
       stage = getNextStage(stage);
       currentGenerator = getNextGenerator();
 
@@ -313,13 +371,12 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
         return;
       }
     }
-    // We've run out of stages and generators, give up.
+    // 我们的 stages 和 generators 已经用完了，放弃吧
     if ((stage == Stage.FINISHED || isCancelled) && !isStarted) {
       notifyFailed();
     }
 
-    // Otherwise a generator started a new load and we expect to be called back in
-    // onDataFetcherReady.
+    // 否则，生成器将启动新的加载，我们期望在 onDataFetcherReady 中回调
   }
 
   private void notifyFailed() {
@@ -329,8 +386,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     onLoadFailed();
   }
 
-  private void notifyComplete(
-      Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
+  private void notifyComplete(Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
     setNotifiedOrThrow();
     callback.onResourceReady(resource, dataSource, isLoadedFromAlternateCacheKey);
   }
@@ -344,38 +400,19 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     isCallbackNotified = true;
   }
 
-  private Stage getNextStage(Stage current) {
-    switch (current) {
-      case INITIALIZE:
-        return diskCacheStrategy.decodeCachedResource() ? Stage.RESOURCE_CACHE : getNextStage(Stage.RESOURCE_CACHE);
-      case RESOURCE_CACHE:
-        return diskCacheStrategy.decodeCachedData() ? Stage.DATA_CACHE : getNextStage(Stage.DATA_CACHE);
-      case DATA_CACHE:
-        // 如果用户选择仅从缓存中检索资源，则跳过源
-        return onlyRetrieveFromCache ? Stage.FINISHED : Stage.SOURCE;
-      case SOURCE:
-      case FINISHED:
-        return Stage.FINISHED;
-      default:
-        throw new IllegalArgumentException("Unrecognized stage: " + current);
-    }
-  }
-
   private void reschedule(RunReason runReason) {
     this.runReason = runReason;
     callback.reschedule(this);
   }
 
-  // This is used by SourceGenerator to ask us to switch back to our thread. Internal methods in
-  // this class should call reschedule with a specific RunReason.
+  // SourceGenerator 会用它来请求我们切换回当前线程。该类的内部方法应该使用特定的 RunReason 调用 reschedule 函数
   @Override
   public void reschedule() {
     reschedule(RunReason.SWITCH_TO_SOURCE_SERVICE);
   }
 
   @Override
-  public void onDataFetcherReady(
-      Key sourceKey, Object data, DataFetcher<?> fetcher, DataSource dataSource, Key attemptedKey) {
+  public void onDataFetcherReady(Key sourceKey, Object data, DataFetcher<?> fetcher, DataSource dataSource, Key attemptedKey) {
     this.currentSourceKey = sourceKey;
     this.currentData = data;
     this.currentFetcher = fetcher;
@@ -396,8 +433,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
   }
 
   @Override
-  public void onDataFetcherFailed(
-      Key attemptedKey, Exception e, DataFetcher<?> fetcher, DataSource dataSource) {
+  public void onDataFetcherFailed(Key attemptedKey, Exception e, DataFetcher<?> fetcher, DataSource dataSource) {
     fetcher.cleanup();
     GlideException exception = new GlideException("Fetching data failed", e);
     exception.setLoggingDetails(attemptedKey, dataSource, fetcher.getDataClass());
@@ -427,8 +463,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     }
   }
 
-  private void notifyEncodeAndRelease(
-      Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
+  private void notifyEncodeAndRelease(Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
     GlideTrace.beginSection("DecodeJob.notifyEncodeAndRelease");
     try {
       if (resource instanceof Initializable) {
@@ -463,8 +498,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     }
   }
 
-  private <Data> Resource<R> decodeFromData(
-      DataFetcher<?> fetcher, Data data, DataSource dataSource) throws GlideException {
+  private <Data> Resource<R> decodeFromData(DataFetcher<?> fetcher, Data data, DataSource dataSource) throws GlideException {
     try {
       if (data == null) {
         return null;
@@ -481,8 +515,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
   }
 
   @SuppressWarnings("unchecked")
-  private <Data> Resource<R> decodeFromFetcher(Data data, DataSource dataSource)
-      throws GlideException {
+  private <Data> Resource<R> decodeFromFetcher(Data data, DataSource dataSource) throws GlideException {
     LoadPath<Data, ?, R> path = decodeHelper.getLoadPath((Class<Data>) data.getClass());
     return runLoadPath(data, dataSource, path);
   }
@@ -494,8 +527,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
       return options;
     }
 
-    boolean isHardwareConfigSafe =
-        dataSource == DataSource.RESOURCE_DISK_CACHE || decodeHelper.isScaleOnlyOrNoTransform();
+    boolean isHardwareConfigSafe = dataSource == DataSource.RESOURCE_DISK_CACHE || decodeHelper.isScaleOnlyOrNoTransform();
     Boolean isHardwareConfigAllowed = options.get(Downsampler.ALLOW_HARDWARE_CONFIG);
 
     // If allow hardware config is defined, we can use it if it's set to false or if it's safe to
@@ -513,15 +545,12 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     return options;
   }
 
-  private <Data, ResourceType> Resource<R> runLoadPath(
-      Data data, DataSource dataSource, LoadPath<Data, ResourceType, R> path)
-      throws GlideException {
+  private <Data, ResourceType> Resource<R> runLoadPath(Data data, DataSource dataSource, LoadPath<Data, ResourceType, R> path) throws GlideException {
     Options options = getOptionsWithHardwareConfig(dataSource);
     DataRewinder<Data> rewinder = glideContext.getRegistry().getRewinder(data);
     try {
-      // ResourceType in DecodeCallback below is required for compilation to work with gradle.
-      return path.load(
-          rewinder, options, width, height, new DecodeCallback<ResourceType>(dataSource));
+      // 与 Gradle 合作需要下面的 DecodeCallback 中的 ResourceCeType
+      return path.load(rewinder, options, width, height, new DecodeCallback<ResourceType>(dataSource));
     } finally {
       rewinder.cleanup();
     }
@@ -687,9 +716,9 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     void encode(DiskCacheProvider diskCacheProvider, Options options) {
       GlideTrace.beginSection("DecodeJob.encode");
       try {
-        diskCacheProvider
-            .getDiskCache()
-            .put(key, new DataCacheWriter<>(encoder, toEncode, options));
+        // 1. 调用 ResourceCache（由 diskCacheProvider.getDiskCache() 提供）
+        // 2. 用 ResourceEncoder 将内存中的资源编码并写到磁盘
+        diskCacheProvider.getDiskCache().put(key, new DataCacheWriter<>(encoder, toEncode, options));
       } finally {
         toEncode.unlock();
         GlideTrace.endSection();
@@ -709,8 +738,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
 
   interface Callback<R> {
 
-    void onResourceReady(
-        Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey);
+    void onResourceReady(Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey);
 
     void onLoadFailed(GlideException e);
 

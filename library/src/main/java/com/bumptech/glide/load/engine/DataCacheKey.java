@@ -4,12 +4,16 @@ import androidx.annotation.NonNull;
 import com.bumptech.glide.load.Key;
 import java.security.MessageDigest;
 
-/** A cache key for original source data + any requested signature. */
+/** 原始源数据 + 任何请求的签名的缓存键 */
 final class DataCacheKey implements Key {
 
   private final Key sourceKey;
   private final Key signature;
 
+  /**
+   * @param sourceKey 原始数据标识（如URL、文件路径等经过SHA-256哈希后的值）
+   * @param signature 应用签名（包含磁盘缓存版本、Transformations等配置信息）
+   */
   DataCacheKey(Key sourceKey, Key signature) {
     this.sourceKey = sourceKey;
     this.signature = signature;

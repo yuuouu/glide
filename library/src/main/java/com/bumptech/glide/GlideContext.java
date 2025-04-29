@@ -10,6 +10,8 @@ import androidx.annotation.VisibleForTesting;
 import com.bumptech.glide.Glide.RequestOptionsFactory;
 import com.bumptech.glide.load.engine.Engine;
 import com.bumptech.glide.load.engine.bitmap_recycle.ArrayPool;
+import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool;
+import com.bumptech.glide.module.AppGlideModule;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.ImageViewTargetFactory;
@@ -108,6 +110,13 @@ public class GlideContext extends ContextWrapper {
     return engine;
   }
 
+  /**
+   * 获取注册表数据
+   *
+   * @see RegistryFactory#lazilyCreateAndInitializeRegistry(Glide, List, AppGlideModule)
+   * @see RegistryFactory#createAndInitRegistry(Glide, List, AppGlideModule)
+   * @see RegistryFactory#initializeDefaults(Context, Registry, BitmapPool, ArrayPool, GlideExperiments)
+   */
   @NonNull
   public Registry getRegistry() {
     return registry.get();

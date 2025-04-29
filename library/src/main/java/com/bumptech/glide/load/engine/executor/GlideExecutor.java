@@ -156,17 +156,13 @@ public final class GlideExecutor implements ExecutorService {
   }
 
   /**
-   * Returns a new unlimited thread pool with zero core thread count to make sure no threads are
-   * created by default, {@link #KEEP_ALIVE_TIME_MS} keep alive time, the {@link
-   * #DEFAULT_SOURCE_UNLIMITED_EXECUTOR_NAME} thread name prefix, the {@link
-   * com.bumptech.glide.load.engine.executor.GlideExecutor.UncaughtThrowableStrategy#DEFAULT}
-   * uncaught throwable strategy, and the {@link SynchronousQueue} since using default unbounded
-   * blocking queue, for example, {@link PriorityBlockingQueue} effectively won't create more than
-   * {@code corePoolSize} threads. See <a href=
-   * "http://developer.android.com/reference/java/util/concurrent/ThreadPoolExecutor.html">
-   * ThreadPoolExecutor documentation</a>.
+   * 返回一个新的无限线程池，其核心线程数为零，以确保默认情况下不会创建任何线程，{@link #KEEP_ALIVE_TIME_MS} 保持活动时间，
+   * {@link #DEFAULT_SOURCE_UNLIMITED_EXECUTOR_NAME} 线程名称前缀，
+   * {@link com.bumptech.glide.load.engine.executor.GlideExecutor.UncaughtThrowableStrategy#DEFAULT} 未捕获可抛出策略，
+   * 以及 {@link SynchronousQueue}，因为使用默认的无界阻塞队列（例如，{@link PriorityBlockingQueue}）实际上不会创建超过 {@code corePoolSize} 个线程。
+   * 请参阅 <a href="http://developer.android.com/reference/java/util/concurrent/ThreadPoolExecutor.html">ThreadPoolExecutor 文档</a>
    *
-   * <p>Source executors allow network operations on their threads.
+   * <p>源执行器允许在其线程上进行网络操作。
    */
   public static GlideExecutor newUnlimitedSourceExecutor() {
     return new GlideExecutor(
@@ -198,11 +194,9 @@ public final class GlideExecutor implements ExecutorService {
 
   static int calculateAnimationExecutorThreadCount() {
     int bestThreadCount = calculateBestThreadCount();
-    // We don't want to add a ton of threads running animations in parallel with our source and
-    // disk cache executors. Doing so adds unnecessary CPU load and can also dramatically increase
-    // our maximum memory usage. Typically one thread is sufficient here, but for higher end devices
-    // with more cores, two threads can provide better performance if lots of GIFs are showing at
-    // once.
+    // 我们不想添加大量与源和磁盘缓存执行器并行运行动画的线程。
+    // 这样做会增加不必要的 CPU 负载，还会显著增加最大内存使用量。
+    // 通常情况下，一个线程就足够了，但对于拥有更多核心的高端设备，如果同时显示大量 GIF，两个线程可以提供更好的性能。
     return bestThreadCount >= 4 ? 2 : 1;
   }
 

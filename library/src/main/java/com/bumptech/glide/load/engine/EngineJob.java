@@ -4,10 +4,13 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.util.Pools;
+import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.Key;
 import com.bumptech.glide.load.engine.EngineResource.ResourceListener;
 import com.bumptech.glide.load.engine.executor.GlideExecutor;
+import com.bumptech.glide.load.resource.gif.GifFrameLoader;
+import com.bumptech.glide.request.BaseRequestOptions;
 import com.bumptech.glide.request.ResourceCallback;
 import com.bumptech.glide.util.Executors;
 import com.bumptech.glide.util.Preconditions;
@@ -25,20 +28,70 @@ import java.util.concurrent.atomic.AtomicInteger;
  * callbacks when the load completes.
  */
 class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
+  // 工厂方法，专门用来创建 EngineResource（持有真正的资源，比如Bitmap）
   private static final EngineResourceFactory DEFAULT_FACTORY = new EngineResourceFactory();
 
   @SuppressWarnings("WeakerAccess")
   @Synthetic
+  // 保存所有请求该资源的回调列表，每个回调配一个Executor（比如主线程Executor）
   final ResourceCallbacksAndExecutors cbs = new ResourceCallbacksAndExecutors();
-
+  // 状态验证器，防止对象在非法状态下被访问，比如 recycled 后继续使用
   private final StateVerifier stateVerifier = StateVerifier.newInstance();
+  // 回调函数，当EngineJob完成时，用来通知外层Engine缓存资源（或者释放资源）
   private final ResourceListener resourceListener;
+  // 用来回收EngineJob自身，复用对象池，减少频繁创建销毁开销
   private final Pools.Pool<EngineJob<?>> pool;
+  // 创建 EngineResource 的工厂类（可注入，用于测试）
   private final EngineResourceFactory engineResourceFactory;
+  // 监听EngineJob整个生命周期，比如移除job、重新调度等
   private final EngineJobListener engineJobListener;
+  /**
+   * 用于加载磁盘缓存（如Resource Disk Cache、Data Disk Cache）。
+   *
+   * <p>特点：
+   * 核心线程数 = 最大线程数 = 1。
+   * 线程空闲超时 = 0秒。
+   * 保证磁盘I/O串行，防止加锁，提高线程调度简单性
+   *
+   * @see GlideExecutor#newDiskCacheBuilder()
+   */
   private final GlideExecutor diskCacheExecutor;
+  /**
+   * 用于从外部来源（比如HTTP、ContentProvider等）加载数据。
+   *
+   * <p>特点：
+   * 核心线程数根据CPU核心数（<=4），最大线程数同核心数。
+   * 线程空闲超时 = 0秒。
+   * 适合控制联网请求并发量，避免占用过多网络带宽或线程
+   *
+   * @see GlideExecutor#newSourceBuilder()
+   */
   private final GlideExecutor sourceExecutor;
+
+  /**
+   * 用于大规模加载源数据，比如批量预加载时使用。
+   *
+   * <p>特点：
+   * 核心线程数 = 0，最大线程数 = Integer.MAX_VALUE（无限扩展）。
+   * 闲置线程回收时间10秒。
+   * 适合短时间内大规模爆发请求，但容易引发内存压力且也容易发生 OOM
+   *
+   * @see GlideExecutor#newUnlimitedSourceExecutor()
+   * @see BaseRequestOptions#useUnlimitedSourceGeneratorsPool(boolean)
+   */
   private final GlideExecutor sourceUnlimitedExecutor;
+  /**
+   * 专门用于加载动画帧（如Gif、Webp动画）。
+   *
+   * <p>特点：
+   * CPU核心数 > 4 时：线程数2；否则1。
+   * 线程空闲超时 = 0秒。
+   * 保证动画加载足够流畅
+   *
+   * @see GlideExecutor#calculateAnimationExecutorThreadCount()
+   * @see GifFrameLoader#getRequestBuilder(RequestManager, int, int)
+   * @see BaseRequestOptions#useAnimationPool(boolean)
+   */
   private final GlideExecutor animationExecutor;
   private final AtomicInteger pendingCallbacks = new AtomicInteger();
 
@@ -125,6 +178,15 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
     return this;
   }
 
+  /**
+   * 启动EngineJob。
+   *
+   * <p>逻辑：
+   * 根据任务类型（磁盘缓存/源加载/动画）选择不同的线程池。
+   * 将DecodeJob丢到线程池异步执行
+   *
+   * @param decodeJob 真正执行加载和解码逻辑的任务
+   */
   public synchronized void start(DecodeJob<R> decodeJob) {
     this.decodeJob = decodeJob;
     GlideExecutor executor = decodeJob.willDecodeFromCache() ? diskCacheExecutor : getActiveSourceExecutor();
@@ -311,8 +373,7 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
   }
 
   @Override
-  public void onResourceReady(
-      Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
+  public void onResourceReady(Resource<R> resource, DataSource dataSource, boolean isLoadedFromAlternateCacheKey) {
     synchronized (this) {
       this.resource = resource;
       this.dataSource = dataSource;
@@ -331,13 +392,18 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
 
   @Override
   public void reschedule(DecodeJob<?> job) {
-    // Even if the job is cancelled here, it still needs to be scheduled so that it can clean itself
-    // up.
+    // 即使作业在此处被取消，它仍然需要被调度，以便能够自行清理
     getActiveSourceExecutor().execute(job);
   }
 
   // We have to post Runnables in a loop. Typically there will be very few callbacks. Acessor method
   // warning seems to be false positive.
+  /**
+   * 当DecodeJob加载失败时，通知所有注册的回调异常。
+   *
+   * <p>流程：
+   * 遍历所有回调，调用 onLoadFailed(Throwable e)
+   */
   @SuppressWarnings({
     "WeakerAccess",
     "PMD.AvoidInstantiatingObjectsInLoops",

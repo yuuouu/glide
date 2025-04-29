@@ -34,8 +34,7 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
     this(helper.getCacheKeys(), helper, cb);
   }
 
-  // In some cases we may want to load a specific cache key (when loading from source written to
-  // cache), so we accept a list of keys rather than just obtain the list from the helper.
+  // 在某些情况下，我们可能想要加载特定的缓存键（从写入缓存的源加载时），因此我们接受键列表，而不是仅从助手中获取列表。
   DataCacheGenerator(List<Key> cacheKeys, DecodeHelper<?> helper, FetcherReadyCallback cb) {
     this.cacheKeys = cacheKeys;
     this.helper = helper;
@@ -60,6 +59,7 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
         cacheFile = helper.getDiskCache().get(originalKey);
         if (cacheFile != null) {
           this.sourceKey = sourceId;
+          // 获取所有可能的数据加载器
           modelLoaders = helper.getModelLoaders(cacheFile);
           modelLoaderIndex = 0;
         }
@@ -67,13 +67,14 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
 
       loadData = null;
       boolean started = false;
+      // 遍历所有的数据加载器
       while (!started && hasNextModelLoader()) {
         ModelLoader<File, ?> modelLoader = modelLoaders.get(modelLoaderIndex++);
-        loadData =
-            modelLoader.buildLoadData(
-                cacheFile, helper.getWidth(), helper.getHeight(), helper.getOptions());
+        // 创建数据加载任务
+        loadData = modelLoader.buildLoadData(cacheFile, helper.getWidth(), helper.getHeight(), helper.getOptions());
         if (loadData != null && helper.hasLoadPath(loadData.fetcher.getDataClass())) {
           started = true;
+          // 启动数据加载
           loadData.fetcher.loadData(helper.getPriority(), this);
         }
       }

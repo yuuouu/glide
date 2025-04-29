@@ -185,6 +185,7 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       Class<R> transcodeClass, Priority priority, DiskCacheStrategy diskCacheStrategy, Map<Class<?>, Transformation<?>> transformations,
       boolean isTransformationRequired, boolean isScaleOnlyOrNoTransform, Options options, boolean isMemoryCacheable, boolean useUnlimitedSourceExecutorPool,
       boolean useAnimationPool, boolean onlyRetrieveFromCache, ResourceCallback cb, Executor callbackExecutor, EngineKey key, long startTime) {
+    // 查看当前任务是否已经在执行中
     EngineJob<?> current = jobs.get(key, onlyRetrieveFromCache);
     if (current != null) {
       current.addCallback(cb, callbackExecutor);
@@ -195,7 +196,7 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
     }
     EngineJob<R> engineJob = engineJobFactory.build(key, isMemoryCacheable, useUnlimitedSourceExecutorPool, useAnimationPool, onlyRetrieveFromCache);
     DecodeJob<R> decodeJob = decodeJobFactory.build(glideContext, model, key, signature, width, height, resourceClass, transcodeClass, priority,
-            diskCacheStrategy, transformations, isTransformationRequired, isScaleOnlyOrNoTransform, onlyRetrieveFromCache, options, engineJob);
+        diskCacheStrategy, transformations, isTransformationRequired, isScaleOnlyOrNoTransform, onlyRetrieveFromCache, options, engineJob);
 
     jobs.put(key, engineJob);
     engineJob.addCallback(cb, callbackExecutor);
@@ -259,7 +260,7 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
   }
 
   private EngineResource<?> getEngineResourceFromCache(Key key) {
-    // 命中内存缓存时，从内存缓存中获取图片资源后移除
+    // 命中内存缓存时，从内存缓存中获取图片资源后移除，放进活动内存中
     Resource<?> cached = cache.remove(key);
 
     final EngineResource<?> result;

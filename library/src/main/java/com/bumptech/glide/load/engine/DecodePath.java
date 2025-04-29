@@ -49,12 +49,7 @@ public class DecodePath<DataType, ResourceType, Transcode> {
             + "}";
   }
 
-  public Resource<Transcode> decode(
-      DataRewinder<DataType> rewinder,
-      int width,
-      int height,
-      @NonNull Options options,
-      DecodeCallback<ResourceType> callback)
+  public Resource<Transcode> decode(DataRewinder<DataType> rewinder, int width, int height, @NonNull Options options, DecodeCallback<ResourceType> callback)
       throws GlideException {
     Resource<ResourceType> decoded = decodeResource(rewinder, width, height, options);
     Resource<ResourceType> transformed = callback.onResourceDecoded(decoded);
@@ -62,9 +57,7 @@ public class DecodePath<DataType, ResourceType, Transcode> {
   }
 
   @NonNull
-  private Resource<ResourceType> decodeResource(
-      DataRewinder<DataType> rewinder, int width, int height, @NonNull Options options)
-      throws GlideException {
+  private Resource<ResourceType> decodeResource(DataRewinder<DataType> rewinder, int width, int height, @NonNull Options options) throws GlideException {
     List<Throwable> exceptions = Preconditions.checkNotNull(listPool.acquire());
     try {
       return decodeResourceWithList(rewinder, width, height, options, exceptions);
@@ -74,13 +67,8 @@ public class DecodePath<DataType, ResourceType, Transcode> {
   }
 
   @NonNull
-  private Resource<ResourceType> decodeResourceWithList(
-      DataRewinder<DataType> rewinder,
-      int width,
-      int height,
-      @NonNull Options options,
-      List<Throwable> exceptions)
-      throws GlideException {
+  private Resource<ResourceType> decodeResourceWithList(DataRewinder<DataType> rewinder, int width, int height, @NonNull Options options,
+      List<Throwable> exceptions) throws GlideException {
     Resource<ResourceType> result = null;
     //noinspection ForLoopReplaceableByForEach to improve perf
     for (int i = 0, size = decoders.size(); i < size; i++) {

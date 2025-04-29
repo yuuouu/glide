@@ -44,8 +44,8 @@ class MainActivity: AppCompatActivity() {
 
         // test
         val sharedOptions: RequestOptions = RequestOptions().placeholder(getDrawable(R.mipmap.fushi)).fitCenter()
-            .diskCacheStrategy(DiskCacheStrategy.DATA).skipMemoryCache(false).onlyRetrieveFromCache(true).useUnlimitedSourceGeneratorsPool(true)
-        Glide.with(this).load(R.mipmap.fushi).apply(sharedOptions).submit()
+            .diskCacheStrategy(DiskCacheStrategy.DATA).skipMemoryCache(false).onlyRetrieveFromCache(true).useUnlimitedSourceGeneratorsPool(true).useAnimationPool(true)
+        Glide.with(this).load(R.mipmap.fushi).preload()
         Glide.with(this).load(R.mipmap.fushi).listener(object: RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                 Log.e("yuu", "加载失败", e)

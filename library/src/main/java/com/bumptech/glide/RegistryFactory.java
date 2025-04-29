@@ -291,21 +291,14 @@ final class RegistryFactory {
     registry
         .append(int.class, InputStream.class, directResourceLoaderStreamFactory)
         .append(Integer.class, InputStream.class, directResourceLoaderStreamFactory)
-        .append(
-            int.class, AssetFileDescriptor.class, directResourceLoaderAssetFileDescriptorFactory)
-        .append(
-            Integer.class,
-            AssetFileDescriptor.class,
-            directResourceLoaderAssetFileDescriptorFactory)
+        .append(int.class, AssetFileDescriptor.class, directResourceLoaderAssetFileDescriptorFactory)
+        .append(Integer.class, AssetFileDescriptor.class, directResourceLoaderAssetFileDescriptorFactory)
         .append(int.class, Drawable.class, directResourceLaoderDrawableFactory)
         .append(Integer.class, Drawable.class, directResourceLaoderDrawableFactory)
         .append(Uri.class, InputStream.class, ResourceUriLoader.newStreamFactory(context))
-        .append(
-            Uri.class,
-            AssetFileDescriptor.class,
-            ResourceUriLoader.newAssetFileDescriptorFactory(context));
+        .append(Uri.class, AssetFileDescriptor.class, ResourceUriLoader.newAssetFileDescriptorFactory(context));
 
-    // ResourceLoader and UriLoader handle resource IDs and Uris owned by other packages.
+    // ResourceLoader 和 UriLoader 处理其他软件包拥有的资源ID和URI。
     ResourceLoader.UriFactory resourceLoaderUriFactory = new ResourceLoader.UriFactory(resources);
     ResourceLoader.AssetFileDescriptorFactory resourceLoaderAssetFileDescriptorFactory =
         new ResourceLoader.AssetFileDescriptorFactory(resources);
@@ -318,42 +311,28 @@ final class RegistryFactory {
         .append(int.class, AssetFileDescriptor.class, resourceLoaderAssetFileDescriptorFactory)
         .append(Integer.class, InputStream.class, resourceLoaderStreamFactory)
         .append(int.class, InputStream.class, resourceLoaderStreamFactory);
-
     registry
         .append(String.class, InputStream.class, new DataUrlLoader.StreamFactory<String>())
         .append(Uri.class, InputStream.class, new DataUrlLoader.StreamFactory<Uri>())
         .append(String.class, InputStream.class, new StringLoader.StreamFactory())
         .append(String.class, ParcelFileDescriptor.class, new StringLoader.FileDescriptorFactory())
-        .append(
-            String.class, AssetFileDescriptor.class, new StringLoader.AssetFileDescriptorFactory())
+        .append(String.class, AssetFileDescriptor.class, new StringLoader.AssetFileDescriptorFactory())
         .append(Uri.class, InputStream.class, new AssetUriLoader.StreamFactory(context.getAssets()))
-        .append(
-            Uri.class,
-            AssetFileDescriptor.class,
-            new AssetUriLoader.FileDescriptorFactory(context.getAssets()))
+        .append(Uri.class, AssetFileDescriptor.class, new AssetUriLoader.FileDescriptorFactory(context.getAssets()))
         .append(Uri.class, InputStream.class, new MediaStoreImageThumbLoader.Factory(context))
         .append(Uri.class, InputStream.class, new MediaStoreVideoThumbLoader.Factory(context));
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      registry.append(
-          Uri.class, InputStream.class, new QMediaStoreUriLoader.InputStreamFactory(context));
-      registry.append(
-          Uri.class,
-          ParcelFileDescriptor.class,
-          new QMediaStoreUriLoader.FileDescriptorFactory(context));
+      registry.append(Uri.class, InputStream.class, new QMediaStoreUriLoader.InputStreamFactory(context));
+      registry.append(Uri.class, ParcelFileDescriptor.class, new QMediaStoreUriLoader.FileDescriptorFactory(context));
     }
     registry
         .append(Uri.class, InputStream.class, new UriLoader.StreamFactory(contentResolver))
-        .append(
-            Uri.class,
-            ParcelFileDescriptor.class,
-            new UriLoader.FileDescriptorFactory(contentResolver))
-        .append(
-            Uri.class,
-            AssetFileDescriptor.class,
-            new UriLoader.AssetFileDescriptorFactory(contentResolver))
+        .append(Uri.class, ParcelFileDescriptor.class, new UriLoader.FileDescriptorFactory(contentResolver))
+        .append(Uri.class, AssetFileDescriptor.class, new UriLoader.AssetFileDescriptorFactory(contentResolver))
         .append(Uri.class, InputStream.class, new UrlUriLoader.StreamFactory())
         .append(URL.class, InputStream.class, new UrlLoader.StreamFactory())
         .append(Uri.class, File.class, new MediaStoreFileLoader.Factory(context))
+        // 对于一个 http 请求
         .append(GlideUrl.class, InputStream.class, new HttpGlideUrlLoader.Factory())
         .append(byte[].class, ByteBuffer.class, new ByteArrayLoader.ByteBufferFactory())
         .append(byte[].class, InputStream.class, new ByteArrayLoader.StreamFactory())
@@ -363,21 +342,14 @@ final class RegistryFactory {
         /* Transcoders */
         .register(Bitmap.class, BitmapDrawable.class, new BitmapDrawableTranscoder(resources))
         .register(Bitmap.class, byte[].class, bitmapBytesTranscoder)
-        .register(
-            Drawable.class,
-            byte[].class,
-            new DrawableBytesTranscoder(
-                bitmapPool, bitmapBytesTranscoder, gifDrawableBytesTranscoder))
+        .register(Drawable.class, byte[].class, new DrawableBytesTranscoder(bitmapPool, bitmapBytesTranscoder, gifDrawableBytesTranscoder))
         .register(GifDrawable.class, byte[].class, gifDrawableBytesTranscoder);
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       ResourceDecoder<ByteBuffer, Bitmap> byteBufferVideoDecoder =
           VideoDecoder.byteBuffer(bitmapPool);
       registry.append(ByteBuffer.class, Bitmap.class, byteBufferVideoDecoder);
-      registry.append(
-          ByteBuffer.class,
-          BitmapDrawable.class,
-          new BitmapDrawableDecoder<>(resources, byteBufferVideoDecoder));
+      registry.append(ByteBuffer.class, BitmapDrawable.class, new BitmapDrawableDecoder<>(resources, byteBufferVideoDecoder));
     }
   }
 

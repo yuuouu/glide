@@ -14,7 +14,9 @@ import java.util.Map;
  */
 @SuppressWarnings("rawtypes")
 public class ResourceDecoderRegistry {
+  // 存储桶标识符
   private final List<String> bucketPriorityList = new ArrayList<>();
+  // 存储桶标识符里的数据列表(dataClass, resourceClass, decoder)
   private final Map<String, List<Entry<?, ?>>> decoders = new HashMap<>();
 
   public synchronized void setBucketPriorityList(@NonNull List<String> buckets) {
@@ -57,17 +59,19 @@ public class ResourceDecoderRegistry {
 
   @NonNull
   @SuppressWarnings("unchecked")
-  public synchronized <T, R> List<Class<R>> getResourceClasses(
-      @NonNull Class<T> dataClass, @NonNull Class<R> resourceClass) {
+  public synchronized <T, R> List<Class<R>> getResourceClasses(@NonNull Class<T> dataClass, @NonNull Class<R> resourceClass) {
     List<Class<R>> result = new ArrayList<>();
+    // 遍历存储桶标识符
     for (String bucket : bucketPriorityList) {
       List<Entry<?, ?>> entries = decoders.get(bucket);
       if (entries == null) {
         continue;
       }
+      // decoders不为空
       for (Entry<?, ?> entry : entries) {
-        if (entry.handles(dataClass, resourceClass)
-            && !result.contains((Class<R>) entry.resourceClass)) {
+        // 判断 (数据类型相同 和 资源类型相同) && result 不包含该资源类型
+        if (entry.handles(dataClass, resourceClass) && !result.contains((Class<R>) entry.resourceClass)) {
+          // 返回资源类型
           result.add((Class<R>) entry.resourceClass);
         }
       }
@@ -94,7 +98,7 @@ public class ResourceDecoderRegistry {
   @NonNull
   private synchronized List<Entry<?, ?>> getOrAddEntryList(@NonNull String bucket) {
     if (!bucketPriorityList.contains(bucket)) {
-      // Add this unspecified bucket as a low priority bucket.
+      // 将新的存储桶添加为低优先级
       bucketPriorityList.add(bucket);
     }
     List<Entry<?, ?>> entries = decoders.get(bucket);
@@ -120,8 +124,7 @@ public class ResourceDecoderRegistry {
     }
 
     public boolean handles(@NonNull Class<?> dataClass, @NonNull Class<?> resourceClass) {
-      return this.dataClass.isAssignableFrom(dataClass)
-          && resourceClass.isAssignableFrom(this.resourceClass);
+      return this.dataClass.isAssignableFrom(dataClass) && resourceClass.isAssignableFrom(this.resourceClass);
     }
   }
 }

@@ -48,17 +48,48 @@ public class Registry {
   public static final String BUCKET_BITMAP_DRAWABLE = "BitmapDrawable";
   private static final String BUCKET_PREPEND_ALL = "legacy_prepend_all";
   private static final String BUCKET_APPEND_ALL = "legacy_append";
-
+  /**
+   * 模型加载表 (Model, Data, ModelLoaderFactory)(模型，数据，模型工厂)
+   * e.g. (GlideUrl.class, InputStream.class, new HttpGlideUrlLoader.Factory())
+   */
   private final ModelLoaderRegistry modelLoaderRegistry;
+  /**
+   * 编码器表 (Data, Encoder) (数据，编码器)
+   * e.g. (ByteBuffer.class, new ByteBufferEncoder())
+   */
   private final EncoderRegistry encoderRegistry;
+  /**
+   * 资源解码器表 (bucket, Data, ResourceClass, Decoder) (存储桶标识符，数据，资源类，解码器)
+   * e.g. (Registry.BUCKET_BITMAP, ParcelFileDescriptor.class, Bitmap.class, new ParcelFileDescriptorBitmapDecoder())
+   */
   private final ResourceDecoderRegistry decoderRegistry;
+  /**
+   * 资源编码器表 (Resource, ResourceEncoder)（资源，资源编码器）
+   * e.g. (Bitmap.class, new BitmapEncoder())
+   */
   private final ResourceEncoderRegistry resourceEncoderRegistry;
+  /**
+   * 数据重写工厂表 (Data, DataRewinder.Factory)（数据，数据重写工厂）
+   * 用于支持重复读取数据（如 InputStream）
+   * e.g. (InputStream.class, new InputStreamRewinder.Factory())
+   */
   private final DataRewinderRegistry dataRewinderRegistry;
+  /**
+   * 转码器表 (Resource, Transcode, Transcoder)（资源，转码，转码器）
+   * e.g. (Bitmap.class, BitmapDrawable.class, new BitmapDrawableTranscoder())
+   */
   private final TranscoderRegistry transcoderRegistry;
+  /**
+   * 图片头信息解析器表（ImageHeaderParser）
+   * 用于解析图片 EXIF、方向等信息
+   * e.g. new DefaultImageHeaderParser()
+   */
   private final ImageHeaderParserRegistry imageHeaderParserRegistry;
-
-  private final ModelToResourceClassCache modelToResourceClassCache =
-      new ModelToResourceClassCache();
+  /**
+   * 模型到资源类的缓存表 (Model, Resource, Transcode -> ResourceClass List)（模型，资源，转码器列表）
+   * 加速获取解码链路，避免重复计算
+   */
+  private final ModelToResourceClassCache modelToResourceClassCache = new ModelToResourceClassCache();
   private final LoadPathCache loadPathCache = new LoadPathCache();
   private final Pool<List<Throwable>> throwableListPool = FactoryPools.threadSafeList();
 
@@ -70,8 +101,7 @@ public class Registry {
     this.dataRewinderRegistry = new DataRewinderRegistry();
     this.transcoderRegistry = new TranscoderRegistry();
     this.imageHeaderParserRegistry = new ImageHeaderParserRegistry();
-    setResourceDecoderBucketPriorityList(
-        Arrays.asList(BUCKET_ANIMATION, BUCKET_BITMAP, BUCKET_BITMAP_DRAWABLE));
+    setResourceDecoderBucketPriorityList(Arrays.asList(BUCKET_ANIMATION, BUCKET_BITMAP, BUCKET_BITMAP_DRAWABLE));
   }
 
   /**
@@ -401,6 +431,20 @@ public class Registry {
    * @param dataClass the data class (e.g. {@link java.io.InputStream}, {@link
    *     java.io.FileDescriptor}).
    */
+  /**
+   * 将新的 {@link ModelLoaderFactory} 附加到现有集合的末尾，以便在所有默认和先前为给定模型和数据类注册的 {@link ModelLoader} 之后尝试构造的 {@link ModelLoader}。
+   * 如果您尝试替换现有的 {@link ModelLoader}，请使用 {@link #prepend(Class, Class, ModelLoaderFactory)}。
+   * 此方法最适合新类型的模型或数据，或作为为现有类型的模型/数据添加额外后备加载器的方式。
+   * 如果为同一个模型和/或数据类注册了多个 {@link ModelLoaderFactory}，则将按照 {@link ModelLoaderFactory} 的注册顺序尝试它们生成的 {@link ModelLoader}。
+   * 只有当所有 {@link ModelLoader} 都失败时，整个请求才会失败。
+   * 参数：
+   * modelClass – 模型类（例如 URL、文件路径）。dataClass – 数据类（例如 java.io.InputStream、java.io.FileDescriptor）。
+   *
+   * @see #prepend(Class, Class, ModelLoaderFactory)
+   * @see #replace(Class, Class, ModelLoaderFactory)
+   * @param modelClass 模型类 (e.g. URL, {@link java.io.File}).
+   * @param dataClass 数据类 (e.g. {@link java.io.InputStream}, {@link java.io.FileDescriptor}).
+   */
   @NonNull
   public <Model, Data> Registry append(
       @NonNull Class<Model> modelClass,
@@ -476,21 +520,17 @@ public class Registry {
       @NonNull Class<Data> dataClass,
       @NonNull Class<TResource> resourceClass,
       @NonNull Class<Transcode> transcodeClass) {
-    LoadPath<Data, TResource, Transcode> result =
-        loadPathCache.get(dataClass, resourceClass, transcodeClass);
+    LoadPath<Data, TResource, Transcode> result = loadPathCache.get(dataClass, resourceClass, transcodeClass);
     if (loadPathCache.isEmptyLoadPath(result)) {
       return null;
     } else if (result == null) {
-      List<DecodePath<Data, TResource, Transcode>> decodePaths =
-          getDecodePaths(dataClass, resourceClass, transcodeClass);
+      List<DecodePath<Data, TResource, Transcode>> decodePaths = getDecodePaths(dataClass, resourceClass, transcodeClass);
       // It's possible there is no way to decode or transcode to the desired types from a given
       // data class.
       if (decodePaths.isEmpty()) {
         result = null;
       } else {
-        result =
-            new LoadPath<>(
-                dataClass, resourceClass, transcodeClass, decodePaths, throwableListPool);
+        result = new LoadPath<>(dataClass, resourceClass, transcodeClass, decodePaths, throwableListPool);
       }
       loadPathCache.put(dataClass, resourceClass, transcodeClass, result);
     }
@@ -503,60 +543,54 @@ public class Registry {
       @NonNull Class<TResource> resourceClass,
       @NonNull Class<Transcode> transcodeClass) {
     List<DecodePath<Data, TResource, Transcode>> decodePaths = new ArrayList<>();
-    List<Class<TResource>> registeredResourceClasses =
-        decoderRegistry.getResourceClasses(dataClass, resourceClass);
+    List<Class<TResource>> registeredResourceClasses = decoderRegistry.getResourceClasses(dataClass, resourceClass);
 
     for (Class<TResource> registeredResourceClass : registeredResourceClasses) {
-      List<Class<Transcode>> registeredTranscodeClasses =
-          transcoderRegistry.getTranscodeClasses(registeredResourceClass, transcodeClass);
+      List<Class<Transcode>> registeredTranscodeClasses = transcoderRegistry.getTranscodeClasses(registeredResourceClass, transcodeClass);
 
       for (Class<Transcode> registeredTranscodeClass : registeredTranscodeClasses) {
 
-        List<ResourceDecoder<Data, TResource>> decoders =
-            decoderRegistry.getDecoders(dataClass, registeredResourceClass);
-        ResourceTranscoder<TResource, Transcode> transcoder =
-            transcoderRegistry.get(registeredResourceClass, registeredTranscodeClass);
+        List<ResourceDecoder<Data, TResource>> decoders = decoderRegistry.getDecoders(dataClass, registeredResourceClass);
+        ResourceTranscoder<TResource, Transcode> transcoder = transcoderRegistry.get(registeredResourceClass, registeredTranscodeClass);
         @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
         DecodePath<Data, TResource, Transcode> path =
-            new DecodePath<>(
-                dataClass,
-                registeredResourceClass,
-                registeredTranscodeClass,
-                decoders,
-                transcoder,
-                throwableListPool);
+            new DecodePath<>(dataClass, registeredResourceClass, registeredTranscodeClass, decoders, transcoder, throwableListPool);
         decodePaths.add(path);
       }
     }
     return decodePaths;
   }
 
+  /**
+   * 拿到当前所需的资源(模型类，数据类，转码器)
+   */
   @NonNull
   public <Model, TResource, Transcode> List<Class<?>> getRegisteredResourceClasses(
       @NonNull Class<Model> modelClass,
       @NonNull Class<TResource> resourceClass,
-      @NonNull Class<Transcode> transcodeClass) {
-    List<Class<?>> result =
-        modelToResourceClassCache.get(modelClass, resourceClass, transcodeClass);
-
+      @NonNull Class<Transcode> transcodeClass
+  ) {
+    List<Class<?>> result = modelToResourceClassCache.get(modelClass, resourceClass, transcodeClass);
     if (result == null) {
       result = new ArrayList<>();
+      // 根据模型加载表拿到资源类
       List<Class<?>> dataClasses = modelLoaderRegistry.getDataClasses(modelClass);
       for (Class<?> dataClass : dataClasses) {
-        List<? extends Class<?>> registeredResourceClasses =
-            decoderRegistry.getResourceClasses(dataClass, resourceClass);
+        // 根据资源解码器表拿到所有能够将 dataClass 解码为 resourceClass（或其子类）的 资源类型列表
+        List<? extends Class<?>> registeredResourceClasses = decoderRegistry.getResourceClasses(dataClass, resourceClass);
+        // 遍历全部的资源类型列表
         for (Class<?> registeredResourceClass : registeredResourceClasses) {
-          List<Class<Transcode>> registeredTranscodeClasses =
-              transcoderRegistry.getTranscodeClasses(registeredResourceClass, transcodeClass);
+          // 根据转码器表，拿到所有 registeredResourceClass 能转码成 transcodeClass 的转码器
+          List<Class<Transcode>> registeredTranscodeClasses = transcoderRegistry.getTranscodeClasses(registeredResourceClass, transcodeClass);
+          // 如果存在从 dataClass 到 transcodeClass 的转码路径，则说明该 registeredResourceClass 可用
           if (!registeredTranscodeClasses.isEmpty() && !result.contains(registeredResourceClass)) {
+            // 添加可以作为中间 resourceClass 的类型（最终可能解码成这个类，然后再转码）
             result.add(registeredResourceClass);
           }
         }
       }
-      modelToResourceClassCache.put(
-          modelClass, resourceClass, transcodeClass, Collections.unmodifiableList(result));
+      modelToResourceClassCache.put(modelClass, resourceClass, transcodeClass, Collections.unmodifiableList(result));
     }
-
     return result;
   }
 
@@ -589,6 +623,9 @@ public class Registry {
     return dataRewinderRegistry.build(data);
   }
 
+  /**
+   * 拿到全部 Model 可用的 (Model, Data, ModelLoaderFactory)(模型，数据，模型工厂)
+   */
   @NonNull
   public <Model> List<ModelLoader<Model, ?>> getModelLoaders(@NonNull Model model) {
     return modelLoaderRegistry.getModelLoaders(model);

@@ -43,20 +43,19 @@ interface DataFetcherGenerator {
      * @param fetcher The fetcher we were loading from.
      * @param dataSource The data source we were loading from.
      */
-    void onDataFetcherFailed(
-        Key attemptedKey, Exception e, DataFetcher<?> fetcher, DataSource dataSource);
+    void onDataFetcherFailed(Key attemptedKey, Exception e, DataFetcher<?> fetcher, DataSource dataSource);
   }
 
   /**
-   * Attempts to a single new {@link com.bumptech.glide.load.data.DataFetcher} and returns true if a
-   * {@link com.bumptech.glide.load.data.DataFetcher} was started, and false otherwise.
+   * 尝试启动一个新的 {@link com.bumptech.glide.load.data.DataFetcher}。
+   * 返回启动结果
    */
   boolean startNext();
 
   /**
-   * Attempts to cancel the currently running fetcher.
+   *尝试取消当前正在运行的 fetcher。
    *
-   * <p>This will be called on the main thread and should complete quickly.
+   * <p>这将在主线程上调用，并且应该很快完成。
    */
   void cancel();
 }

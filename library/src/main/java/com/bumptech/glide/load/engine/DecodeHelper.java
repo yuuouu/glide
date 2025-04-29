@@ -92,6 +92,10 @@ final class DecodeHelper<Transcode> {
     isCacheKeysSet = false;
   }
 
+  /**
+   * 默认为 DiskLruCacheWrapper
+   * @see com.bumptech.glide.load.engine.cache.DiskLruCacheWrapper
+   */
   DiskCache getDiskCache() {
     return diskCacheProvider.getDiskCache();
   }
@@ -128,6 +132,9 @@ final class DecodeHelper<Transcode> {
     return glideContext.getArrayPool();
   }
 
+  /**
+   * 自带的转码器类
+   */
   Class<?> getTranscodeClass() {
     return transcodeClass;
   }
@@ -136,10 +143,11 @@ final class DecodeHelper<Transcode> {
     return model.getClass();
   }
 
+  /**
+   * 拿到 模型类，资源类，转码器列表
+   */
   List<Class<?>> getRegisteredResourceClasses() {
-    return glideContext
-        .getRegistry()
-        .getRegisteredResourceClasses(model.getClass(), resourceClass, transcodeClass);
+    return glideContext.getRegistry().getRegisteredResourceClasses(model.getClass(), resourceClass, transcodeClass);
   }
 
   boolean hasLoadPath(Class<?> dataClass) {
@@ -168,11 +176,8 @@ final class DecodeHelper<Transcode> {
 
     if (result == null) {
       if (transformations.isEmpty() && isTransformationRequired) {
-        throw new IllegalArgumentException(
-            "Missing transformation for "
-                + resourceClass
-                + ". If you wish to"
-                + " ignore unknown resource types, use the optional transformation methods.");
+        throw new IllegalArgumentException("Missing transformation for " + resourceClass + ". If you wish to"
+            + " ignore unknown resource types, use the optional transformation methods.");
       } else {
         return UnitTransformation.get();
       }
@@ -188,8 +193,10 @@ final class DecodeHelper<Transcode> {
     return glideContext.getRegistry().getResultEncoder(resource);
   }
 
-  List<ModelLoader<File, ?>> getModelLoaders(File file)
-      throws Registry.NoModelLoaderAvailableException {
+  /**
+   * 通过 Registry 获取所有注册的 ModelLoader（如FileLoader、ByteBufferFileLoader、OkHttpUrlLoader等）
+   */
+  List<ModelLoader<File, ?>> getModelLoaders(File file) throws Registry.NoModelLoaderAvailableException {
     return glideContext.getRegistry().getModelLoaders(file);
   }
 
