@@ -117,7 +117,7 @@ class SourceGenerator implements DataFetcherGenerator, DataFetcherGenerator.Fetc
       // loadDataListIndex是遍历索引
       loadData = helper.getLoadData().get(loadDataListIndex++);
       if (loadData != null &&
-          // 要么能缓存，要么有解码路径
+          // 要么能缓存，要么存在解码路径
           (helper.getDiskCacheStrategy().isDataCacheable(loadData.fetcher.getDataSource()) || helper.hasLoadPath(loadData.fetcher.getDataClass()))) {
         started = true;
         startNextLoad(loadData);
@@ -170,6 +170,7 @@ class SourceGenerator implements DataFetcherGenerator, DataFetcherGenerator.Fetc
       Object data = rewinder.rewindAndGet();
       Encoder<Object> encoder = helper.getSourceEncoder(data);
       DataCacheWriter<Object> writer = new DataCacheWriter<>(encoder, data, helper.getOptions());
+      // 查看是否存在数据缓存
       DataCacheKey newOriginalKey = new DataCacheKey(loadData.sourceKey, helper.getSignature());
       DiskCache diskCache = helper.getDiskCache();
       diskCache.put(newOriginalKey, writer);

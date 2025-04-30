@@ -150,10 +150,16 @@ final class DecodeHelper<Transcode> {
     return glideContext.getRegistry().getRegisteredResourceClasses(model.getClass(), resourceClass, transcodeClass);
   }
 
+  /**
+   * 判断传进来的 数据类 是否存在转码路径
+   */
   boolean hasLoadPath(Class<?> dataClass) {
     return getLoadPath(dataClass) != null;
   }
 
+  /**
+   * 拿到当前 数据类、资源类、转码器类 的完整转码路径
+   */
   <Data> LoadPath<Data, ?, Transcode> getLoadPath(Class<Data> dataClass) {
     return glideContext.getRegistry().getLoadPath(dataClass, resourceClass, transcodeClass);
   }

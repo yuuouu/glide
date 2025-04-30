@@ -8,22 +8,13 @@ import com.bumptech.glide.util.pool.FactoryPools;
 import com.bumptech.glide.util.pool.StateVerifier;
 
 /**
- * A resource that defers any calls to {@link Resource#recycle()} until after {@link #unlock()} is
- * called.
+ * 将所有对 {@link Resource#recycle()} 的调用推迟到 {@link #unlock()} 调用之后的资源。
  *
- * <p>If the resource was recycled prior to {@link #unlock()}, then {@link #unlock()} will also
- * recycle the resource.
+ * <p>如果资源在 {@link #unlock()} 之前被回收，则 {@link #unlock()} 也会回收该资源。
+ *
  */
 final class LockedResource<Z> implements Resource<Z>, FactoryPools.Poolable {
-  private static final Pools.Pool<LockedResource<?>> POOL =
-      FactoryPools.threadSafe(
-          20,
-          new FactoryPools.Factory<LockedResource<?>>() {
-            @Override
-            public LockedResource<?> create() {
-              return new LockedResource<Object>();
-            }
-          });
+  private static final Pools.Pool<LockedResource<?>> POOL = FactoryPools.threadSafe(20, LockedResource::new);
   private final StateVerifier stateVerifier = StateVerifier.newInstance();
   private Resource<Z> toWrap;
   private boolean isLocked;

@@ -13,12 +13,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Attempts to decode and transcode resource type from a given data type.
+ * 尝试从给定的数据类型解码并转码资源类型。
  *
- * @param <DataType> The type of data ResourceType that will be decoded from.
- * @param <ResourceType> The type of intermediate resource that will be decoded.
- * @param <Transcode> The final type of resource that will be transcoded from ResourceType and
- *     returned to the caller.
+ * @param <DataType>     将被解码的 ResourceType 数据类型。
+ * @param <ResourceType> 将被解码的中间资源类型。
+ * @param <Transcode>    将从 ResourceType 转码并返回给调用者的最终资源类型。
+ *                       返回给调用者。
  */
 public class DecodePath<DataType, ResourceType, Transcode> {
   private static final String TAG = "DecodePath";

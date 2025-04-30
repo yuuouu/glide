@@ -10,15 +10,12 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * For a given {@link com.bumptech.glide.load.data.DataFetcher} for a given data class, attempts to
- * fetch the data and then run it through one or more {@link
- * com.bumptech.glide.load.engine.DecodePath}s.
+ * 对于给定数据类的给定 {@link com.bumptech.glide.load.data.DataFetcher}，
+ * 尝试获取数据，然后通过一个或多个 {@link com.bumptech.glide.load.engine.DecodePath} 运行。
  *
- * @param <Data> The type of data that will be fetched.
- * @param <ResourceType> The type of intermediate resource that will be decoded within one of the
- *     {@link com.bumptech.glide.load.engine.DecodePath}s.
- * @param <Transcode> The type of resource that will be returned as the result if the load and one
- *     of the decode paths succeeds.
+ * @param <Data>         待获取数据类型。
+ * @param <ResourceType> 将在某个 {@link com.bumptech.glide.load.engine.DecodePath} 中解码的中间资源类型。
+ * @param <Transcode>    加载和解码路径之一成功后，将作为结果返回的资源类型。
  */
 public class LoadPath<Data, ResourceType, Transcode> {
   private final Class<Data> dataClass;
@@ -45,13 +42,8 @@ public class LoadPath<Data, ResourceType, Transcode> {
             + "}";
   }
 
-  public Resource<Transcode> load(
-      DataRewinder<Data> rewinder,
-      @NonNull Options options,
-      int width,
-      int height,
-      DecodePath.DecodeCallback<ResourceType> decodeCallback)
-      throws GlideException {
+  public Resource<Transcode> load(DataRewinder<Data> rewinder, @NonNull Options options, int width, int height,
+      DecodePath.DecodeCallback<ResourceType> decodeCallback) throws GlideException {
     List<Throwable> throwables = Preconditions.checkNotNull(listPool.acquire());
     try {
       return loadWithExceptionList(rewinder, options, width, height, decodeCallback, throwables);
@@ -60,14 +52,8 @@ public class LoadPath<Data, ResourceType, Transcode> {
     }
   }
 
-  private Resource<Transcode> loadWithExceptionList(
-      DataRewinder<Data> rewinder,
-      @NonNull Options options,
-      int width,
-      int height,
-      DecodePath.DecodeCallback<ResourceType> decodeCallback,
-      List<Throwable> exceptions)
-      throws GlideException {
+  private Resource<Transcode> loadWithExceptionList(DataRewinder<Data> rewinder, @NonNull Options options, int width, int height,
+      DecodePath.DecodeCallback<ResourceType> decodeCallback, List<Throwable> exceptions) throws GlideException {
     Resource<Transcode> result = null;
     //noinspection ForLoopReplaceableByForEach to improve perf
     for (int i = 0, size = decodePaths.size(); i < size; i++) {

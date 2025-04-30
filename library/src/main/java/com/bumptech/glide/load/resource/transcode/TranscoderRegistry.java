@@ -30,13 +30,12 @@ public class TranscoderRegistry {
   }
 
   /**
-   * Returns the currently registered {@link
-   * com.bumptech.glide.load.resource.transcode.ResourceTranscoder} for the given classes.
+   * 返回当前已注册的 {@link com.bumptech.glide.load.resource.transcode.ResourceTranscoder}，该类对应于给定的类。
    *
-   * @param resourceClass The class of the resource that the transcoder transcodes from.
-   * @param transcodedClass The class of the resource that the transcoder transcodes to.
-   * @param <Z> The type of the resource that the transcoder transcodes from.
-   * @param <R> The type of the resource that the transcoder transcodes to.
+   * @param resourceClass   转码器转码的源资源的类。
+   * @param transcodedClass 转码器转码的目标资源的类。
+   * @param <Z>             转码器转码的源资源的类型。
+   * @param <R>             转码器转码的目标资源的类型。
    */
   @NonNull
   @SuppressWarnings("unchecked")

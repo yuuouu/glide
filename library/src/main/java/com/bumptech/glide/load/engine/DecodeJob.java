@@ -168,8 +168,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
   }
 
   /**
-   * Called when we've finished encoding (either because the encode process is complete, or because
-   * we don't have anything to encode).
+   * 编码完成后调用（编码过程已完成，或没有内容需要编码）。
    */
   private void onEncodeComplete() {
     if (releaseManager.onEncodeComplete()) {
@@ -482,6 +481,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
       stage = Stage.ENCODE;
       try {
         if (deferredEncodeManager.hasResourceToEncode()) {
+          // 这里是写入资源缓存
           deferredEncodeManager.encode(diskCacheProvider, options);
         }
       } finally {
@@ -489,9 +489,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
           lockedResource.unlock();
         }
       }
-      // Call onEncodeComplete outside the finally block so that it's not called if the encode
-      // process
-      // throws.
+      // 在 finally 块之外调用 onEncodeComplete，这样如果编码过程抛出，它就不会被调用。
       onEncodeComplete();
     } finally {
       GlideTrace.endSection();
@@ -618,22 +616,14 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
           key = new DataCacheKey(currentSourceKey, signature);
           break;
         case TRANSFORMED:
-          key =
-              new ResourceCacheKey(
-                  decodeHelper.getArrayPool(),
-                  currentSourceKey,
-                  signature,
-                  width,
-                  height,
-                  appliedTransformation,
-                  resourceSubClass,
-                  options);
+          key = new ResourceCacheKey(decodeHelper.getArrayPool(), currentSourceKey, signature, width, height, appliedTransformation, resourceSubClass, options);
           break;
         default:
           throw new IllegalArgumentException("Unknown strategy: " + encodeStrategy);
       }
 
       LockedResource<Z> lockedResult = LockedResource.obtain(transformed);
+      // 完成资源缓存的准备
       deferredEncodeManager.init(key, encoder, lockedResult);
       result = lockedResult;
     }

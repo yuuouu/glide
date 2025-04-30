@@ -40,7 +40,7 @@ public class Registry {
   public static final String BUCKET_ANIMATION = "Animation";
   /**
    * @deprecated Identical to {@link #BUCKET_ANIMATION}, just with a more confusing name. This
-   *     bucket can be used for all animation types (including webp).
+   * bucket can be used for all animation types (including webp).
    */
   @Deprecated public static final String BUCKET_GIF = BUCKET_ANIMATION;
 
@@ -90,6 +90,10 @@ public class Registry {
    * 加速获取解码链路，避免重复计算
    */
   private final ModelToResourceClassCache modelToResourceClassCache = new ModelToResourceClassCache();
+
+  /**
+   * 保存从数据源（dataClass）到目标转码类型（transcodeClass）的解码路径
+   */
   private final LoadPathCache loadPathCache = new LoadPathCache();
   private final Pool<List<Throwable>> throwableListPool = FactoryPools.threadSafeList();
 
@@ -117,7 +121,7 @@ public class Registry {
    * Encoder} that is registered first will be used.
    *
    * @deprecated Use the equivalent {@link #append(Class, Class, ModelLoaderFactory)} method
-   *     instead.
+   * instead.
    */
   @NonNull
   @Deprecated
@@ -173,13 +177,13 @@ public class Registry {
    * new types of resources and data or as a way to add an additional fallback decoder for an
    * existing type of data.
    *
+   * @param dataClass     The data that will be decoded from ({@link java.io.InputStream}, {@link
+   *                      java.io.FileDescriptor} etc).
+   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
+   *                      {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
+   * @param decoder       The {@link ResourceDecoder} to register.
    * @see #append(String, Class, Class, ResourceDecoder)
    * @see #prepend(Class, Class, ResourceDecoder)
-   * @param dataClass The data that will be decoded from ({@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor} etc).
-   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
-   *     {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
-   * @param decoder The {@link ResourceDecoder} to register.
    */
   @NonNull
   public <Data, TResource> Registry append(
@@ -201,14 +205,14 @@ public class Registry {
    * new types of resources and data or as a way to add an additional fallback decoder for an
    * existing type of data.
    *
+   * @param bucket        The bucket identifier to add this decoder to.
+   * @param dataClass     The data that will be decoded from ({@link java.io.InputStream}, {@link
+   *                      java.io.FileDescriptor} etc).
+   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
+   *                      {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
+   * @param decoder       The {@link ResourceDecoder} to register.
    * @see #prepend(String, Class, Class, ResourceDecoder)
    * @see #setResourceDecoderBucketPriorityList(List)
-   * @param bucket The bucket identifier to add this decoder to.
-   * @param dataClass The data that will be decoded from ({@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor} etc).
-   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
-   *     {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
-   * @param decoder The {@link ResourceDecoder} to register.
    */
   @NonNull
   public <Data, TResource> Registry append(
@@ -230,13 +234,13 @@ public class Registry {
    * ResourceDecoder#handles(Object, Options)} to fall back to the default {@link ResourceDecoder}s
    * if you only want to change the default functionality for certain types of data.
    *
+   * @param dataClass     The data that will be decoded from ({@link java.io.InputStream}, {@link
+   *                      java.io.FileDescriptor} etc).
+   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
+   *                      {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
+   * @param decoder       The {@link ResourceDecoder} to register.
    * @see #prepend(String, Class, Class, ResourceDecoder)
    * @see #append(Class, Class, ResourceDecoder)
-   * @param dataClass The data that will be decoded from ({@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor} etc).
-   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
-   *     {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
-   * @param decoder The {@link ResourceDecoder} to register.
    */
   @NonNull
   public <Data, TResource> Registry prepend(
@@ -258,14 +262,14 @@ public class Registry {
    * ResourceDecoder}s if you only want to change the default functionality for certain types of
    * data.
    *
+   * @param bucket        The bucket identifier to add this decoder to.
+   * @param dataClass     The data that will be decoded from ({@link java.io.InputStream}, {@link
+   *                      java.io.FileDescriptor} etc).
+   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
+   *                      {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
+   * @param decoder       The {@link ResourceDecoder} to register.
    * @see #append(String, Class, Class, ResourceDecoder)
    * @see #setResourceDecoderBucketPriorityList(List)
-   * @param bucket The bucket identifier to add this decoder to.
-   * @param dataClass The data that will be decoded from ({@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor} etc).
-   * @param resourceClass The resource that will be decoded to ({@link android.graphics.Bitmap},
-   *     {@link com.bumptech.glide.load.resource.gif.GifDrawable} etc).
-   * @param decoder The {@link ResourceDecoder} to register.
    */
   @NonNull
   public <Data, TResource> Registry prepend(
@@ -288,9 +292,9 @@ public class Registry {
    * <p>When registering decoders, you can use these buckets to specify the ordering relative only
    * to other decoders in that bucket.
    *
+   * @param buckets The list of bucket identifiers in order from highest priority to least priority.
    * @see #append(String, Class, Class, ResourceDecoder)
    * @see #prepend(String, Class, Class, ResourceDecoder)
-   * @param buckets The list of bucket identifiers in order from highest priority to least priority.
    */
   // Final to avoid a PMD error.
   @NonNull
@@ -386,11 +390,11 @@ public class Registry {
    * Registers the given {@link ResourceTranscoder} to convert from the given resource {@link Class}
    * to the given transcode {@link Class}.
    *
-   * @param resourceClass The class that will be transcoded from (e.g. {@link
-   *     android.graphics.Bitmap}).
+   * @param resourceClass  The class that will be transcoded from (e.g. {@link
+   *                       android.graphics.Bitmap}).
    * @param transcodeClass The class that will be transcoded to (e.g. {@link
-   *     android.graphics.drawable.BitmapDrawable}).
-   * @param transcoder The {@link ResourceTranscoder} to register.
+   *                       android.graphics.drawable.BitmapDrawable}).
+   * @param transcoder     The {@link ResourceTranscoder} to register.
    */
   @NonNull
   public <TResource, Transcode> Registry register(
@@ -412,38 +416,19 @@ public class Registry {
   }
 
   /**
-   * Appends a new {@link ModelLoaderFactory} onto the end of the existing set so that the
-   * constructed {@link ModelLoader} will be tried after all default and previously registered
-   * {@link ModelLoader}s for the given model and data classes.
-   *
-   * <p>If you're attempting to replace an existing {@link ModelLoader}, use {@link #prepend(Class,
-   * Class, ModelLoaderFactory)}. This method is best for new types of models and/or data or as a
-   * way to add an additional fallback loader for an existing type of model/data.
-   *
-   * <p>If multiple {@link ModelLoaderFactory}s are registered for the same model and/or data
-   * classes, the {@link ModelLoader}s they produce will be attempted in the order the {@link
-   * ModelLoaderFactory}s were registered. Only if all {@link ModelLoader}s fail will the entire
-   * request fail.
-   *
-   * @see #prepend(Class, Class, ModelLoaderFactory)
-   * @see #replace(Class, Class, ModelLoaderFactory)
-   * @param modelClass The model class (e.g. URL, file path).
-   * @param dataClass the data class (e.g. {@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor}).
-   */
-  /**
    * 将新的 {@link ModelLoaderFactory} 附加到现有集合的末尾，以便在所有默认和先前为给定模型和数据类注册的 {@link ModelLoader} 之后尝试构造的 {@link ModelLoader}。
    * 如果您尝试替换现有的 {@link ModelLoader}，请使用 {@link #prepend(Class, Class, ModelLoaderFactory)}。
    * 此方法最适合新类型的模型或数据，或作为为现有类型的模型/数据添加额外后备加载器的方式。
    * 如果为同一个模型和/或数据类注册了多个 {@link ModelLoaderFactory}，则将按照 {@link ModelLoaderFactory} 的注册顺序尝试它们生成的 {@link ModelLoader}。
    * 只有当所有 {@link ModelLoader} 都失败时，整个请求才会失败。
-   * 参数：
-   * modelClass – 模型类（例如 URL、文件路径）。dataClass – 数据类（例如 java.io.InputStream、java.io.FileDescriptor）。
    *
+   * <p>要处理新类型的数据或为 Glide 的默认行为添加回退，请使用 append() 。 append() 将确保仅在尝试 Glide 的默认行为后才调用 ModelLoader 或 ResourceDecoder 。
+   * 如果您尝试处理 Glide 默认组件处理的子类型（例如特定的 Uri 权限或子类），则可能需要使用 prepend() 来确保 Glide 的默认组件不会在您的自定义组件之前加载资源。
+   *
+   * @param modelClass 模型类 (e.g. URL, {@link java.io.File}).
+   * @param dataClass  数据类 (e.g. {@link java.io.InputStream}, {@link java.io.FileDescriptor}).
    * @see #prepend(Class, Class, ModelLoaderFactory)
    * @see #replace(Class, Class, ModelLoaderFactory)
-   * @param modelClass 模型类 (e.g. URL, {@link java.io.File}).
-   * @param dataClass 数据类 (e.g. {@link java.io.InputStream}, {@link java.io.FileDescriptor}).
    */
   @NonNull
   public <Model, Data> Registry append(
@@ -455,26 +440,24 @@ public class Registry {
   }
 
   /**
-   * Prepends a new {@link ModelLoaderFactory} onto the beginning of the existing set so that the
-   * constructed {@link ModelLoader} will be tried before all default and previously registered
-   * {@link ModelLoader}s for the given model and data classes.
+   * 将新的 {@link ModelLoaderFactory} 添加到现有集合的开头，以便
+   * 构造的 {@link ModelLoader} 将在所有默认和先前注册的
+   * 给定模型和数据类的 {@link ModelLoader} 之前尝试。
    *
-   * <p>If you're attempting to add additional functionality or add a backup that should run only
-   * after the default {@link ModelLoader}s run, use {@link #append(Class, Class,
-   * ModelLoaderFactory)}. This method is best for adding an additional case to Glide's existing
-   * functionality that should run first. This method will still run Glide's default {@link
-   * ModelLoader}s if the prepended {@link ModelLoader}s fail.
+   * <p>如果您尝试添加其他功能或添加仅在默认 {@link ModelLoader} 运行后运行的备份，请使用 {@link #append(Class, Class, ModelLoaderFactory)}。
+   * 此方法最适合在 Glide 现有的功能中添加应首先运行的附加用例。如果前置的 {@link ModelLoader} 失败，此方法仍将运行 Glide 的默认 {@link ModelLoader}。
    *
-   * <p>If multiple {@link ModelLoaderFactory}s are registered for the same model and/or data
-   * classes, the {@link ModelLoader}s they produce will be attempted in the order the {@link
-   * ModelLoaderFactory}s were registered. Only if all {@link ModelLoader}s fail will the entire
-   * request fail.
+   * <p>如果为同一个模型和/或数据类注册了多个 {@link ModelLoaderFactory}，则将按照 {@link ModelLoaderFactory} 注册的顺序尝试它们生成的 {@link ModelLoader}。
+   * 只有当所有 {@link ModelLoader} 都失败时，整个请求才会失败。
    *
+   * <p>如果您希望在 ModelLoader 或 ResourceDecoder 失败时回退到 Glide 的默认行为，可以使用 prepend() 来处理现有数据的子集。
+   * prepend prepend() 将确保您的 ModelLoader 或 ResourceDecoder 在所有其他先前注册的组件之前被调用，并可以优先运行。
+   * 如果您的 ModelLoader 或 ResourceDecoder 从其 handles() 方法返回 false 或失败，则所有其他 ModelLoader 或 ResourceDecoders 将按照它们注册的顺序逐一调用，从而提供回退功能。
+   *
+   * @param modelClass 模型类（例如 URL、文件路径）
+   * @param dataClass 数据类（例如 {@link java.io.InputStream}、{@link java.io.FileDescriptor}）
    * @see #append(Class, Class, ModelLoaderFactory)
    * @see #replace(Class, Class, ModelLoaderFactory)
-   * @param modelClass The model class (e.g. URL, file path).
-   * @param dataClass the data class (e.g. {@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor}).
    */
   @NonNull
   public <Model, Data> Registry prepend(
@@ -486,25 +469,22 @@ public class Registry {
   }
 
   /**
-   * Removes all default and previously registered {@link ModelLoaderFactory}s for the given data
-   * and model class and replaces all of them with the single {@link ModelLoader} provided.
+   * 移除所有默认的和之前为给定数据和模型类注册的 {@link ModelLoaderFactory}，并将它们全部替换为提供的单个 {@link ModelLoader}。
    *
-   * <p>If you're attempting to add additional functionality or add a backup that should run only
-   * after the default {@link ModelLoader}s run, use {@link #append(Class, Class,
-   * ModelLoaderFactory)}. This method should be used only when you want to ensure that Glide's
-   * default {@link ModelLoader}s do not run.
+   * <p>如果您尝试添加其他功能或添加仅在默认 {@link ModelLoader} 运行后运行的备份，
+   * 请使用 {@link #append(Class, Class, ModelLoaderFactory)}。仅当您希望确保 Glide 的默认 {@link ModelLoader} 不运行时，才应使用此方法。
    *
-   * <p>One good use case for this method is when you want to replace Glide's default networking
-   * library with your OkHttp, Volley, or your own implementation. Using {@link #prepend(Class,
-   * Class, ModelLoaderFactory)} or {@link #append(Class, Class, ModelLoaderFactory)} may still
-   * allow Glide's default networking library to run in some cases. Using this method will ensure
-   * that only your networking library will run and that the request will fail otherwise.
+   * <p>此方法的一个良好用例是，当您想将 Glide 的默认网络库替换为 OkHttp、Volley 或您自己的实现时。
+   * 在某些情况下，使用 {@link #prepend(Class,Class, ModelLoaderFactory)} 或 {@link #append(Class, Class, ModelLoaderFactory)} 可能仍会许 Glide 的默认网络库运行。
+   * 使用此方法将确保只有您的网络库会运行，否则请求将失败。
    *
+   * <p> 要完全替换 Glide 的默认行为并确保它不会运行，请使用 replace() 。 replace() 会删除所有处理给定模型和数据类的 ModelLoaders ，然后添加您的 ModelLoader 。
+   * replace() 在使用 OkHttp 或 Volley 等库替换 Glide 的网络逻辑时特别有用，在这种情况下，您要确保只使用 OkHttp 或 Volley。
+   *
+   * @param modelClass 模型类（例如 URL、文件路径）。
+   * @param dataClass 数据类（例如 {@link java.io.InputStream}、{@link java.io.FileDescriptor}）。
    * @see #prepend(Class, Class, ModelLoaderFactory)
    * @see #append(Class, Class, ModelLoaderFactory)
-   * @param modelClass The model class (e.g. URL, file path).
-   * @param dataClass the data class (e.g. {@link java.io.InputStream}, {@link
-   *     java.io.FileDescriptor}).
    */
   @NonNull
   public <Model, Data> Registry replace(
@@ -515,6 +495,9 @@ public class Registry {
     return this;
   }
 
+  /**
+   * 根据给定的数据类型、资源类型和转码类型，获取一个加载路径（LoadPath）
+   */
   @Nullable
   public <Data, TResource, Transcode> LoadPath<Data, TResource, Transcode> getLoadPath(
       @NonNull Class<Data> dataClass,
@@ -525,11 +508,11 @@ public class Registry {
       return null;
     } else if (result == null) {
       List<DecodePath<Data, TResource, Transcode>> decodePaths = getDecodePaths(dataClass, resourceClass, transcodeClass);
-      // It's possible there is no way to decode or transcode to the desired types from a given
-      // data class.
+      // 可能无法从给定的数据类解码或转码为所需的类型。
       if (decodePaths.isEmpty()) {
         result = null;
       } else {
+        // 一个封装了解码路径列表的对象，它表示从数据到转码类型的完整加载过程。包括 数据类，资源类，转码后的类, 解码类
         result = new LoadPath<>(dataClass, resourceClass, transcodeClass, decodePaths, throwableListPool);
       }
       loadPathCache.put(dataClass, resourceClass, transcodeClass, result);
@@ -537,24 +520,30 @@ public class Registry {
     return result;
   }
 
+  /**
+   * 构建并返回所有从数据源到目标转码类型的解码路径，确保能够处理不同的数据源和目标类型的转换。
+   * 返回一条从数据源（dataClass）到目标转码类型（transcodeClass）的解码路径
+   */
   @NonNull
   private <Data, TResource, Transcode> List<DecodePath<Data, TResource, Transcode>> getDecodePaths(
       @NonNull Class<Data> dataClass,
       @NonNull Class<TResource> resourceClass,
       @NonNull Class<Transcode> transcodeClass) {
     List<DecodePath<Data, TResource, Transcode>> decodePaths = new ArrayList<>();
+    // 根据资源解码器表拿到所有能够将 dataClass 解码为 resourceClass（或其子类）的资源类型列表
     List<Class<TResource>> registeredResourceClasses = decoderRegistry.getResourceClasses(dataClass, resourceClass);
-
+    // 遍历全部的资源类型列表
     for (Class<TResource> registeredResourceClass : registeredResourceClasses) {
+      // 查找所有能够将解码后的资源类型转码为 transcodeClass 的转码类型
       List<Class<Transcode>> registeredTranscodeClasses = transcoderRegistry.getTranscodeClasses(registeredResourceClass, transcodeClass);
-
       for (Class<Transcode> registeredTranscodeClass : registeredTranscodeClasses) {
-
+        // 将数据从 dataClass 解析并最终转码为 transcodeClass
         List<ResourceDecoder<Data, TResource>> decoders = decoderRegistry.getDecoders(dataClass, registeredResourceClass);
         ResourceTranscoder<TResource, Transcode> transcoder = transcoderRegistry.get(registeredResourceClass, registeredTranscodeClass);
+        // path 表示一条从 dataClass 到 transcodeClass 的转换路径，并将这些路径添加到 decodePaths 列表中
         @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-        DecodePath<Data, TResource, Transcode> path =
-            new DecodePath<>(dataClass, registeredResourceClass, registeredTranscodeClass, decoders, transcoder, throwableListPool);
+        DecodePath<Data, TResource, Transcode> path = new DecodePath<>(dataClass, registeredResourceClass, registeredTranscodeClass, decoders, transcoder,
+            throwableListPool);
         decodePaths.add(path);
       }
     }
@@ -667,7 +656,9 @@ public class Registry {
     }
   }
 
-  /** Thrown when no {@link ResourceEncoder} is registered for a given resource class. */
+  /**
+   * Thrown when no {@link ResourceEncoder} is registered for a given resource class.
+   */
   // Never serialized by Glide.
   @SuppressWarnings("serial")
   public static class NoResultEncoderAvailableException extends MissingComponentException {
@@ -681,7 +672,9 @@ public class Registry {
     }
   }
 
-  /** Thrown when no {@link Encoder} is registered for a given data class. */
+  /**
+   * Thrown when no {@link Encoder} is registered for a given data class.
+   */
   // Never serialized by Glide.
   @SuppressWarnings("serial")
   public static class NoSourceEncoderAvailableException extends MissingComponentException {
@@ -690,7 +683,9 @@ public class Registry {
     }
   }
 
-  /** Thrown when some necessary component is missing for a load. */
+  /**
+   * Thrown when some necessary component is missing for a load.
+   */
   // Never serialized by Glide.
   @SuppressWarnings("serial")
   public static class MissingComponentException extends RuntimeException {
@@ -699,7 +694,9 @@ public class Registry {
     }
   }
 
-  /** Thrown when no {@link ImageHeaderParser} is registered. */
+  /**
+   * Thrown when no {@link ImageHeaderParser} is registered.
+   */
   // Never serialized by Glide.
   @SuppressWarnings("serial")
   public static final class NoImageHeaderParserException extends MissingComponentException {
