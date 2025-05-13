@@ -23,6 +23,8 @@ import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.pool.FactoryPools.Poolable;
 import com.bumptech.glide.util.pool.GlideTrace;
 import com.bumptech.glide.util.pool.StateVerifier;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -208,18 +210,26 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     pool.release(this);
   }
 
+  /**
+   * 如果是负数，表示当前任务 < other（应该先执行）
+   * 如果是 0，表示两者一样
+   * 如果是正数，表示当前任务 > other（应该后执行）
+  */
   @Override
   public int compareTo(@NonNull DecodeJob<?> other) {
-    int result = getPriority() - other.getPriority();
+//    int result = getPriority() - other.getPriority();
+    int result = priority.ordinal() - other.priority.ordinal();
+    // 优先级
     if (result == 0) {
+      // 如果优先级一样,则按照任务的顺序进行排序
       result = order - other.order;
     }
     return result;
   }
 
-  private int getPriority() {
+ /* private int getPriority() {
     return priority.ordinal();
-  }
+  }*/
 
   public void cancel() {
     isCancelled = true;
@@ -605,8 +615,7 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
 
     Resource<Z> result = transformed;
     boolean isFromAlternateCacheKey = !decodeHelper.isSourceKey(currentSourceKey);
-    if (diskCacheStrategy.isResourceCacheable(
-        isFromAlternateCacheKey, dataSource, encodeStrategy)) {
+    if (diskCacheStrategy.isResourceCacheable(isFromAlternateCacheKey, dataSource, encodeStrategy)) {
       if (encoder == null) {
         throw new Registry.NoResultEncoderAvailableException(transformed.get().getClass());
       }

@@ -9,7 +9,6 @@ import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.Key;
 import com.bumptech.glide.load.engine.EngineResource.ResourceListener;
 import com.bumptech.glide.load.engine.executor.GlideExecutor;
-import com.bumptech.glide.load.resource.gif.GifFrameLoader;
 import com.bumptech.glide.request.BaseRequestOptions;
 import com.bumptech.glide.request.ResourceCallback;
 import com.bumptech.glide.util.Executors;
@@ -89,7 +88,7 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
    * 保证动画加载足够流畅
    *
    * @see GlideExecutor#calculateAnimationExecutorThreadCount()
-   * @see GifFrameLoader#getRequestBuilder(RequestManager, int, int)
+   * @see com.bumptech.glide.load.resource.gif.GifFrameLoader#getRequestBuilder(RequestManager, int, int)
    * @see BaseRequestOptions#useAnimationPool(boolean)
    */
   private final GlideExecutor animationExecutor;
