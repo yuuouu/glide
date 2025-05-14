@@ -59,8 +59,7 @@ import java.util.concurrent.Executor;
  * @see Glide#with(androidx.fragment.app.Fragment)
  * @see Glide#with(Context)
  */
-public class RequestManager
-    implements ComponentCallbacks2, LifecycleListener, ModelTypes<RequestBuilder<Drawable>> {
+public class RequestManager implements ComponentCallbacks2, LifecycleListener, ModelTypes<RequestBuilder<Drawable>> {
   private static final RequestOptions DECODE_TYPE_BITMAP = decodeTypeOf(Bitmap.class).lock();
   private static final RequestOptions DECODE_TYPE_GIF = decodeTypeOf(GifDrawable.class).lock();
   private static final RequestOptions DOWNLOAD_ONLY_OPTIONS = diskCacheStrategyOf(DiskCacheStrategy.DATA).priority(Priority.LOW).skipMemoryCache(true);
@@ -631,8 +630,7 @@ public class RequestManager
    */
   @NonNull
   @CheckResult
-  public <ResourceType> RequestBuilder<ResourceType> as(
-      @NonNull Class<ResourceType> resourceClass) {
+  public <ResourceType> RequestBuilder<ResourceType> as(@NonNull Class<ResourceType> resourceClass) {
     return new RequestBuilder<>(glide, this, resourceClass, context);
   }
 

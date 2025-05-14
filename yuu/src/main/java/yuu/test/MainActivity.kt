@@ -9,6 +9,7 @@ import android.util.Log
 import android.widget.ImageView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -36,10 +37,10 @@ class MainActivity: AppCompatActivity() {
 //        Log.e(TAG, "onCreate: applicationContext hashCode=${applicationContextGlide.hashCode()}")
 //        Log.e(TAG, "onCreate: context hashCode=${context.hashCode()}")
 
-        Glide.with(applicationContext).load(R.mipmap.fushi).into(imageView)
-        imageView.setOnClickListener {
-            startActivity(Intent(this, TestActivity::class.java))
-            finish()
+        findViewById<ConstraintLayout>(R.id.main).setOnClickListener {
+            Glide.with(this).load(R.mipmap.fushi).placeholder(getDrawable(R.mipmap.fushi)).into(imageView)
+//            startActivity(Intent(this, TestActivity::class.java))
+//            finish()
         }
 
         // test

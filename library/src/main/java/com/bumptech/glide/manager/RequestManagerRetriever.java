@@ -143,6 +143,7 @@ public class RequestManagerRetriever implements Handler.Callback {
   @Deprecated
   @NonNull
   public RequestManager get(@NonNull Activity activity) {
+    // 仅在测试中调用，这个实际是不生效的
     return get(activity.getApplicationContext());
   }
 

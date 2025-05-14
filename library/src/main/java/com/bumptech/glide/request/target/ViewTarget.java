@@ -23,27 +23,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A base {@link Target} for loading {@link android.graphics.Bitmap}s into {@link View}s that
- * provides default implementations for most most methods and can determine the size of views using
- * a {@link android.view.ViewTreeObserver.OnDrawListener}.
+ * 一个用于将 {@link android.graphics.Bitmap} 加载到 {@link View} 中的基础 {@link Target}，
+ * 该 Target 为大多数方法提供默认实现，并可使用{@link android.view.ViewTreeObserver.OnDrawListener} 确定视图的大小。
  *
- * <p>To detect {@link View} reuse in {@link android.widget.ListView} or any {@link
- * android.view.ViewGroup} that reuses views, this class uses the {@link View#setTag(Object)} method
- * to store some metadata so that if a view is reused, any previous loads or resources from previous
- * loads can be cancelled or reused.
+ * <p>为了检测 {@link android.widget.ListView} 或任何重用视图的 {@link android.view.ViewGroup} 中 {@link View} 的重用，
+ * 此类使用 {@link View#setTag(Object)} 方法来存储一些元数据，以便在重用视图时，可以取消或重用先前加载的任何数据或先前加载的资源。
  *
- * <p>Any calls to {@link View#setTag(Object)}} on a View given to this class will result in
- * excessive allocations and and/or {@link IllegalArgumentException}s. If you must call {@link
- * View#setTag(Object)} on a view, use {@link #setTagId(int)} to specify a custom tag for Glide to
- * use.
+ * <p>对分配给此类的视图进行任何 {@link View#setTag(Object)}} 调用都将导致过度分配和/或 {@link IllegalArgumentException}。
+ * 如果必须在视图上调用 {@link View#setTag(Object)}，请使用 {@link #setTagId(int)} 指定 Glide 要使用的自定义标签。
  *
- * <p>Subclasses must call super in {@link #onLoadCleared(Drawable)}
+ * <p>子类必须在 {@link #onLoadCleared(Drawable)} 中调用 super。
  *
- * @param <T> The specific subclass of view wrapped by this target.
- * @param <Z> The resource type this target will receive.
- * @deprecated Use {@link CustomViewTarget}. Using this class is unsafe without implementing {@link
- *     #onLoadCleared} and results in recycled bitmaps being referenced from the UI and hard to
- *     root-cause crashes.
+ * @param <T> 此目标包装的视图的具体子类。
+ * @param <Z> 此目标将接收的资源类型。
+ * @deprecated 使用 {@link CustomViewTarget}。如果不实现 {@link #onLoadCleared}，使用此类是不安全的，会导致从 UI 引用回收的位图，并且很难找到崩溃的根本原因。
  */
 @Deprecated
 public abstract class ViewTarget<T extends View, Z> extends BaseTarget<Z> {

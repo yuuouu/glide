@@ -512,8 +512,7 @@ public class Glide implements ComponentCallbacks2 {
 
   @NonNull
   private static RequestManagerRetriever getRetriever(@Nullable Context context) {
-    // Context could be null for other reasons (ie the user passes in null), but in practice it will
-    // only occur due to errors with the Fragment lifecycle.
+    // 由于其他原因（即用户传入 null），Context 可能为 null，但实际上它只会由于 Fragment 生命周期的错误而发生。
     Preconditions.checkNotNull(context, DESTROYED_ACTIVITY_WARNING);
     return Glide.get(context).getRequestManagerRetriever();
   }

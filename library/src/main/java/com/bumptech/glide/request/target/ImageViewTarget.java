@@ -136,5 +136,6 @@ public abstract class ImageViewTarget<Z> extends ViewTarget<ImageView, Z>
     }
   }
 
+  // 视图的实际更新方法
   protected abstract void setResource(@Nullable Z resource);
 }

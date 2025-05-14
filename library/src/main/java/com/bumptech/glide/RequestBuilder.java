@@ -87,11 +87,7 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   // We only override the method to change the return type, not the functionality.
   @SuppressLint("CheckResult")
   @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
-  protected RequestBuilder(
-      @NonNull Glide glide,
-      RequestManager requestManager,
-      Class<TranscodeType> transcodeClass,
-      Context context) {
+  protected RequestBuilder(@NonNull Glide glide, RequestManager requestManager, Class<TranscodeType> transcodeClass, Context context) {
     this.glide = glide;
     this.requestManager = requestManager;
     this.transcodeClass = transcodeClass;
@@ -663,11 +659,8 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
     return applyResourceThemeAndSignature(requestBuilder);
   }
 
-  private RequestBuilder<TranscodeType> applyResourceThemeAndSignature(
-      RequestBuilder<TranscodeType> requestBuilder) {
-    return requestBuilder
-        .theme(context.getTheme())
-        .signature(AndroidResourceSignature.obtain(context));
+  private RequestBuilder<TranscodeType> applyResourceThemeAndSignature(RequestBuilder<TranscodeType> requestBuilder) {
+    return requestBuilder.theme(context.getTheme()).signature(AndroidResourceSignature.obtain(context));
   }
 
   /**
@@ -915,7 +908,7 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
     return into(
         glideContext.buildImageViewTarget(view, transcodeClass),
         /* targetListener= */ null,
-        requestOptions,
+        requestOptions, // 将 load() 后的全部配置传递进去
         Executors.mainThreadExecutor());
   }
 

@@ -12,7 +12,7 @@
     android:theme="@style/Theme.Glideparent">
     <activity
       android:exported="true"
-      android:name=".PriorityTestActivity">
+      android:name=".MainActivity">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
 
