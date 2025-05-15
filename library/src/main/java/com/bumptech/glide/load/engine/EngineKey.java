@@ -8,7 +8,9 @@ import com.bumptech.glide.util.Preconditions;
 import java.security.MessageDigest;
 import java.util.Map;
 
-/** An in memory only cache key used to multiplex loads. */
+/**
+ * An in memory only cache key used to multiplex loads.
+ */
 class EngineKey implements Key {
   private final Object model;
   private final int width;
@@ -20,24 +22,15 @@ class EngineKey implements Key {
   private final Options options;
   private int hashCode;
 
-  EngineKey(
-      Object model,
-      Key signature,
-      int width,
-      int height,
-      Map<Class<?>, Transformation<?>> transformations,
-      Class<?> resourceClass,
-      Class<?> transcodeClass,
-      Options options) {
+  EngineKey(Object model, Key signature, int width, int height, Map<Class<?>,
+      Transformation<?>> transformations, Class<?> resourceClass, Class<?> transcodeClass, Options options) {
     this.model = Preconditions.checkNotNull(model);
     this.signature = Preconditions.checkNotNull(signature, "Signature must not be null");
     this.width = width;
     this.height = height;
     this.transformations = Preconditions.checkNotNull(transformations);
-    this.resourceClass =
-        Preconditions.checkNotNull(resourceClass, "Resource class must not be null");
-    this.transcodeClass =
-        Preconditions.checkNotNull(transcodeClass, "Transcode class must not be null");
+    this.resourceClass = Preconditions.checkNotNull(resourceClass, "Resource class must not be null");
+    this.transcodeClass = Preconditions.checkNotNull(transcodeClass, "Transcode class must not be null");
     this.options = Preconditions.checkNotNull(options);
   }
 

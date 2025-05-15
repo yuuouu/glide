@@ -41,7 +41,7 @@ final class ActiveResources {
   @VisibleForTesting final Map<Key, ResourceWeakReference> activeEngineResources = new HashMap<>();
 
   /**
-   * 一个监控通道，用来通知 Glide：某个之前中活动缓存中的资源对象，已经被 JVM 判定为可回收（弱可达），需要做后续清理
+   * 一个监控通道，用来通知 Glide：某个之前中活动资源中的资源对象，已经被 JVM 判定为可回收（弱可达），需要做后续清理
    * <br>
    * 在 {@link #cleanReferenceQueue} 监听到资源被回收时，会从队列中移除该资源，并调用 {@link #cleanupActiveReference(ResourceWeakReference)} 方法进行清理
    */

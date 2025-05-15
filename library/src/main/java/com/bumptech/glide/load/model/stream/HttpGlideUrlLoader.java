@@ -39,10 +39,8 @@ public class HttpGlideUrlLoader implements ModelLoader<GlideUrl, InputStream> {
   }
 
   @Override
-  public LoadData<InputStream> buildLoadData(
-      @NonNull GlideUrl model, int width, int height, @NonNull Options options) {
-    // GlideUrls memoize parsed URLs so caching them saves a few object instantiations and time
-    // spent parsing urls.
+  public LoadData<InputStream> buildLoadData(@NonNull GlideUrl model, int width, int height, @NonNull Options options) {
+    // GlideUrls 记住已解析的 URL，因此缓存它们可以节省一些对象实例和解析 URL 所花费的时间。
     GlideUrl url = model;
     if (modelCache != null) {
       url = modelCache.get(model, 0, 0);

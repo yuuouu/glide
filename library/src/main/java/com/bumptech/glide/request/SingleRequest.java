@@ -445,7 +445,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
     target.onLoadFailed(error);
   }
 
-  /** A callback method that should never be invoked directly. */
+  /** 一个不应直接调用的回调方法。 */
   @Override
   public void onSizeReady(int width, int height) {
     stateVerifier.throwIfRecycled();
@@ -470,9 +470,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
               requestOptions.getOptions(), requestOptions.isMemoryCacheable(), requestOptions.getUseUnlimitedSourceGeneratorsPool(), requestOptions.getUseAnimationPool(),
               requestOptions.getOnlyRetrieveFromCache(), this, callbackExecutor);
 
-      // This is a hack that's only useful for testing right now where loads complete synchronously
-      // even though under any executor running on any thread but the main thread, the load would
-      // have completed asynchronously.
+      // 这是一个仅对当前测试有用的技巧，其中即使在主线程以外的任何线程上运行的任何执行器下，加载也会异步完成，但加载仍会同步完成。
       if (status != Status.RUNNING) {
         loadStatus = null;
       }
@@ -604,6 +602,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
       }
       anyListenerHandledUpdatingTarget |= targetListener != null && targetListener.onResourceReady(result, model, target, dataSource, isFirstResource);
 
+      // 如果任意一个监听器在回调(onResourceReady)中返回true，则不执行target.onResourceReady()显示图片
       if (!anyListenerHandledUpdatingTarget) {
         Transition<? super R> animation = animationFactory.build(dataSource, isFirstResource);
         target.onResourceReady(result, animation);
@@ -655,6 +654,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
         }
         anyListenerHandledUpdatingTarget |= targetListener != null && targetListener.onLoadFailed(e, model, target, isFirstReadyResource());
 
+        // 如果任意一个监听器在回调(onLoadFailed)中返回true，则不显示错误占位符
         if (!anyListenerHandledUpdatingTarget) {
           setErrorPlaceholder();
         }

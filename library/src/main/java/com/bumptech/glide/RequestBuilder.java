@@ -177,8 +177,7 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   @NonNull
   @CheckResult
   @SuppressWarnings("unchecked")
-  public RequestBuilder<TranscodeType> listener(
-      @Nullable RequestListener<TranscodeType> requestListener) {
+  public RequestBuilder<TranscodeType> listener(@Nullable RequestListener<TranscodeType> requestListener) {
     if (isAutoCloneEnabled()) {
       return clone().listener(requestListener);
     }

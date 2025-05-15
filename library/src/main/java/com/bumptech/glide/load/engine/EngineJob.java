@@ -213,9 +213,7 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
   @GuardedBy("this")
   void callCallbackOnResourceReady(ResourceCallback cb) {
     try {
-      // This is overly broad, some Glide code is actually called here, but it's much
-      // simpler to encapsulate here than to do so at the actual call point in the
-      // Request implementation.
+      // 这太宽泛了，实际上这里调用了一些 Glide 代码，但在这里封装比在 Request 实现中的实际调用点进行封装要简单得多。
       cb.onResourceReady(engineResource, dataSource, isLoadedFromAlternateCacheKey);
     } catch (Throwable t) {
       throw new CallbackException(t);
@@ -302,10 +300,8 @@ class EngineJob<R> implements DecodeJob.Callback<R>, Poolable {
         throw new IllegalStateException("Already have resource");
       }
       engineResource = engineResourceFactory.build(resource, isCacheable, key, resourceListener);
-      // Hold on to resource for duration of our callbacks below so we don't recycle it in the
-      // middle of notifying if it synchronously released by one of the callbacks. Acquire it under
-      // a lock here so that any newly added callback that executes before the next locked section
-      // below can't recycle the resource before we call the callbacks.
+      // 在下面的回调函数执行期间，保留资源，这样我们就不会在通知过程中回收它（如果它被某个回调函数同步释放）。
+      // 在此处对其进行锁定，这样，任何在下一个锁定部分执行之前执行的新添加的回调函数都无法在我们调用回调函数之前回收资源。
       hasResource = true;
       copy = cbs.copy();
       incrementPendingCallbacks(copy.size() + 1);

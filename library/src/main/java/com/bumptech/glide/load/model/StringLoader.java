@@ -26,8 +26,7 @@ public class StringLoader<Data> implements ModelLoader<String, Data> {
   }
 
   @Override
-  public LoadData<Data> buildLoadData(
-      @NonNull String model, int width, int height, @NonNull Options options) {
+  public LoadData<Data> buildLoadData(@NonNull String model, int width, int height, @NonNull Options options) {
     Uri uri = parseUri(model);
     if (uri == null || !uriLoader.handles(uri)) {
       return null;

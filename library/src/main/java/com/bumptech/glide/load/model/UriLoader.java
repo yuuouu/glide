@@ -44,8 +44,7 @@ public class UriLoader<Data> implements ModelLoader<Uri, Data> {
   }
 
   @Override
-  public LoadData<Data> buildLoadData(
-      @NonNull Uri model, int width, int height, @NonNull Options options) {
+  public LoadData<Data> buildLoadData(@NonNull Uri model, int width, int height, @NonNull Options options) {
     return new LoadData<>(new ObjectKey(model), factory.build(model));
   }
 

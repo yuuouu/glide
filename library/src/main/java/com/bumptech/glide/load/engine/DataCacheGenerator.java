@@ -11,11 +11,10 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Generates {@link com.bumptech.glide.load.data.DataFetcher DataFetchers} from cache files
- * containing original unmodified source data.
+ * 从缓存文件生成 {@link com.bumptech.glide.load.data.DataFetcher DataFetchers}
+ * 包含原始未修改的源数据。
  */
 class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallback<Object> {
-
   private final List<Key> cacheKeys;
   private final DecodeHelper<?> helper;
   private final FetcherReadyCallback cb;
@@ -25,8 +24,7 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
   private List<ModelLoader<File, ?>> modelLoaders;
   private int modelLoaderIndex;
   private volatile LoadData<?> loadData;
-  // PMD is wrong here, this File must be an instance variable because it may be used across
-  // multiple calls to startNext.
+  // PMD 在这里是错误的，这个文件必须是一个实例变量，因为它可能在多次调用 startNext 时使用。
   @SuppressWarnings("PMD.SingularField")
   private File cacheFile;
 
@@ -52,8 +50,7 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
         }
 
         Key sourceId = cacheKeys.get(sourceIdIndex);
-        // PMD.AvoidInstantiatingObjectsInLoops The loop iterates a limited number of times
-        // and the actions it performs are much more expensive than a single allocation.
+        // PMD.AvoidInstantiatingObjectsInLoops 循环迭代有限次数，并且它执行的操作比单次分配要昂贵得多。
         @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
         Key originalKey = new DataCacheKey(sourceId, helper.getSignature());
         cacheFile = helper.getDiskCache().get(originalKey);
