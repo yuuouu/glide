@@ -1,5 +1,6 @@
 package com.bumptech.glide.load.engine;
 
+import android.util.Log;
 import androidx.annotation.NonNull;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.Key;
@@ -50,6 +51,7 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
         }
 
         Key sourceId = cacheKeys.get(sourceIdIndex);
+        Log.e("yuu", "yuu startNext sourceId : " + sourceId.getClass().getCanonicalName());
         // PMD.AvoidInstantiatingObjectsInLoops 循环迭代有限次数，并且它执行的操作比单次分配要昂贵得多。
         @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
         Key originalKey = new DataCacheKey(sourceId, helper.getSignature());

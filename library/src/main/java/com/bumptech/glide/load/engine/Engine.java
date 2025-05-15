@@ -1,6 +1,7 @@
 package com.bumptech.glide.load.engine;
 
 import android.util.Log;
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
@@ -25,7 +26,7 @@ import com.bumptech.glide.util.pool.FactoryPools;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
-/** Responsible for starting loads and managing active and cached resources. */
+/** 负责开始负载并管理主动和缓存的资源。 */
 public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedListener, EngineResource.ResourceListener {
   private static final String TAG = "Engine";
   private static final int JOB_POOL_SIZE = 150;
@@ -123,31 +124,30 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
   }
 
   /**
-   * Starts a load for the given arguments.
+   * 根据给定的参数启动加载。
    *
-   * <p>Must be called on the main thread.
+   * <p>必须在主线程上调用。
    *
-   * <p>The flow for any request is as follows:
+   * <p>任何请求的流程如下：
    *
    * <ul>
-   *   <li>Check the current set of actively used resources, return the active resource if present,
-   *       and move any newly inactive resources into the memory cache.
-   *   <li>Check the memory cache and provide the cached resource if present.
-   *   <li>Check the current set of in progress loads and add the cb to the in progress load if one
-   *       is present.
-   *   <li>Start a new load.
+   * <li>检查当前正在使用的资源集合，如果存在则返回活动资源，
+   * 并将任何新近不活动的资源移入内存缓存。
+   * <li>检查内存缓存，如果存在则提供缓存的资源。
+   * <li>检查当前正在进行的加载集合，如果存在，则将 cb 添加到正在进行的加载中。
+   * <li>启动新的加载。
    * </ul>
    *
-   * <p>Active resources are those that have been provided to at least one request and have not yet
-   * been released. Once all consumers of a resource have released that resource, the resource then
-   * goes to cache. If the resource is ever returned to a new consumer from cache, it is re-added to
-   * the active resources. If the resource is evicted from the cache, its resources are recycled and
-   * re-used if possible and the resource is discarded. There is no strict requirement that
-   * consumers release their resources so active resources are held weakly.
+   * <p>活动资源是指已提供给至少一个请求且尚未
+   * 释放的资源。一旦资源的所有使用者都释放了该资源，该资源就会
+   * 进入缓存。如果资源从缓存中返回给新的使用者，则会将其重新添加到
+   * 活动资源中。如果资源从缓存中被移除，其资源将被回收并
+   * 尽可能重复使用，然后丢弃该资源。没有严格要求
+   * 消费者释放其资源，因此活动资源会被弱持有。
    *
-   * @param width The target width in pixels of the desired resource.
-   * @param height The target height in pixels of the desired resource.
-   * @param cb The callback that will be called when the load completes.
+   * @param width 所需资源的目标宽度（以像素为单位）。
+   * @param height 所需资源的目标高度（以像素为单位）。
+   * @param cb 加载完成后将调用的回调函数。
    */
   public <R> LoadStatus load(GlideContext glideContext, Object model, Key signature, int width, int height, Class<?> resourceClass, Class<R> transcodeClass,
       Priority priority, DiskCacheStrategy diskCacheStrategy, Map<Class<?>, Transformation<?>> transformations, boolean isTransformationRequired,
@@ -162,10 +162,10 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
      */
     EngineKey key = keyFactory.buildKey(model, signature, width, height, transformations, resourceClass, transcodeClass, options);
 
-    EngineResource<?> memoryResource;
+    EngineResource<?> memoryResource = null;
     synchronized (this) {
       // 缓存加载图片的入口
-      memoryResource = loadFromMemory(key, isMemoryCacheable, startTime);
+//      memoryResource = loadFromMemory(key, isMemoryCacheable, startTime);
 
       if (memoryResource == null) {
         // 如果缓存为空，则启动一个线程去加载图片
@@ -206,12 +206,12 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
     return new LoadStatus(cb, engineJob);
   }
 
+  @Keep
   @Nullable
   private EngineResource<?> loadFromMemory(EngineKey key, boolean isMemoryCacheable, long startTime) {
     if (!isMemoryCacheable) {
       return null;
     }
-
     // 从活动内存中加载图片资源
     EngineResource<?> active = loadFromActiveResources(key);
     if (active != null) {
@@ -229,7 +229,6 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       }
       return cached;
     }
-
     return null;
   }
 
@@ -241,7 +240,7 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
   private EngineResource<?> loadFromActiveResources(Key key) {
     EngineResource<?> active = activeResources.get(key);
     if (active != null) {
-      // 命中活动缓存时，增加引用计数
+      // 命中活动资源时，增加引用计数
       active.acquire();
     }
     return active;

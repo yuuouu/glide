@@ -17,6 +17,9 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * 测试类
@@ -29,34 +32,36 @@ class MainActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        val imageView = findViewById<ImageView>(R.id.iv)
-        val fragmentActivity = Glide.with(this)
-//        val applicationContextGlide = Glide.with(applicationContext)
-//        val context = Glide.with(baseContext)
-//        Log.e(TAG, "onCreate: fragmentActivity hashCode=${fragmentActivity.hashCode()}")
-//        Log.e(TAG, "onCreate: applicationContext hashCode=${applicationContextGlide.hashCode()}")
-//        Log.e(TAG, "onCreate: context hashCode=${context.hashCode()}")
-
-        findViewById<ConstraintLayout>(R.id.main).setOnClickListener {
-            Glide.with(this).load(R.mipmap.fushi).placeholder(getDrawable(R.mipmap.fushi)).into(imageView)
-//            startActivity(Intent(this, TestActivity::class.java))
-//            finish()
-        }
 
         // test
-        val sharedOptions: RequestOptions = RequestOptions().placeholder(getDrawable(R.mipmap.fushi)).fitCenter()
-            .diskCacheStrategy(DiskCacheStrategy.DATA).skipMemoryCache(false).onlyRetrieveFromCache(true).useUnlimitedSourceGeneratorsPool(true).useAnimationPool(true)
-        Glide.with(this).load(R.mipmap.fushi).preload()
-        Glide.with(this).load(R.mipmap.fushi).listener(object: RequestListener<Drawable> {
-            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                Log.e("yuu", "加载失败", e)
-                return false // 返回 false，表示 Glide 会继续处理错误
-            }
+        /*   val sharedOptions: RequestOptions = RequestOptions().placeholder(getDrawable(R.mipmap.fushi)).fitCenter()
+               .diskCacheStrategy(DiskCacheStrategy.DATA).skipMemoryCache(false).onlyRetrieveFromCache(true).useUnlimitedSourceGeneratorsPool(true).useAnimationPool(true)
+           Glide.with(this).load(R.mipmap.fushi).listener(object: RequestListener<Drawable> {
+               override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                   Log.e("yuu", "加载失败", e)
+                   return false
+               }
 
-            override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                Log.d("yuu", "加载成功")
-                return false // 返回 false，表示 Glide 会继续显示资源
+               override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                   Log.d("yuu", "加载成功")
+                   return false
+               }
+           }).into(imageView)*/
+
+        testCache()
+    }
+
+    private fun testCache() {
+        val imageView = findViewById<ImageView>(R.id.iv)
+        val KB489 = "https://isorepublic.com/wp-content/uploads/2024/07/iso-republic-night-full-moon.jpg"
+        findViewById<ConstraintLayout>(R.id.main).setOnClickListener {
+            Glide.with(this).load(KB489).skipMemoryCache(false).into(imageView)
+        }
+        imageView.setOnClickListener {
+            Glide.with(this).clear(imageView)
+            CoroutineScope(Dispatchers.IO).launch {
+                Glide.get(applicationContext).clearDiskCache()
             }
-        }).into(imageView)
+        }
     }
 }
