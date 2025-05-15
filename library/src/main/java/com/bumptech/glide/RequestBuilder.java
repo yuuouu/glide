@@ -1278,6 +1278,10 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
         callbackExecutor);
   }
 
+  Object getModel() {
+    return model;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o instanceof RequestBuilder<?>) {
