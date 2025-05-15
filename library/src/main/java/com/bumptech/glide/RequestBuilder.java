@@ -818,45 +818,37 @@ public class RequestBuilder<TranscodeType> extends BaseRequestOptions<RequestBui
   }
 
   private <Y extends Target<TranscodeType>> Y into(
-      @NonNull Y target,
-      @Nullable RequestListener<TranscodeType> targetListener,
-      BaseRequestOptions<?> options,
-      Executor callbackExecutor) {
+      @NonNull Y target, @Nullable RequestListener<TranscodeType> targetListener, BaseRequestOptions<?> options, Executor callbackExecutor) {
     Preconditions.checkNotNull(target);
+    // 确保调用顺序正确，如果没调用 .load(model)，就不能调用 .into()，否则没有图片可以加载。
     if (!isModelSet) {
       throw new IllegalArgumentException("You must call #load() before calling #into()");
     }
 
+    // 调用 buildRequest() 构建出一个新的 Request 对象，它封装了从加载资源、解码、转码、设置图片到 target 的完整流程。
     Request request = buildRequest(target, targetListener, options, callbackExecutor);
-
+    // 取出旧请求，进行复用判断
     Request previous = target.getRequest();
-    if (request.isEquivalentTo(previous)
-        && !isSkipMemoryCacheWithCompletePreviousRequest(options, previous)) {
-      // If the request is completed, beginning again will ensure the result is re-delivered,
-      // triggering RequestListeners and Targets. If the request is failed, beginning again will
-      // restart the request, giving it another chance to complete. If the request is already
-      // running, we can let it continue running without interruption.
+    if (request.isEquivalentTo(previous) &&  // 新旧请求等价
+        !isSkipMemoryCacheWithCompletePreviousRequest(options, previous)) {
+      // 如果请求已完成，beginning again 将确保结果重新传递，并触发 RequestListeners 和 Targets。
+      // 如果请求失败，beginning again 将重新启动请求，使其再次有机会完成。如果请求已在运行，我们可以让它继续运行而不会中断。
       if (!Preconditions.checkNotNull(previous).isRunning()) {
-        // Use the previous request rather than the new one to allow for optimizations like skipping
-        // setting placeholders, tracking and un-tracking Targets, and obtaining View dimensions
-        // that are done in the individual Request.
+        // 使用前一个请求而不是新的请求，以实现优化，例如跳过设置占位符、跟踪和取消跟踪目标以及获取在单个请求中完成的视图尺寸。
         previous.begin();
       }
       return target;
     }
 
-    requestManager.clear(target);
-    target.setRequest(request);
-    requestManager.track(target, request);
+    requestManager.clear(target); // 解绑旧请求，取消监听
+    target.setRequest(request);   // 将新的请求设置到 Target
+    requestManager.track(target, request); // 启动请求并绑定到生命周期
 
     return target;
   }
 
-  // If the caller is using skipMemoryCache and the previous request is finished, calling begin on
-  // the previous request will complete from memory because it will just use the resource that had
-  // already been loaded. If the previous request isn't complete, we can wait for it to finish
-  // because the previous request must also be using skipMemoryCache for the requests to be
-  // equivalent. See #2663 for additional context.
+  // 如果调用者使用了 skipMemoryCache，并且前一个请求已经完成，则对前一个请求调用 begin 将从内存中完成，因为它只会使用已加载的资源。
+  // 如果前一个请求尚未完成，我们可以等待它完成，因为前一个请求也必须使用 skipMemoryCache，这样两个请求才等效。更多上下文请参阅 #2663。
   private boolean isSkipMemoryCacheWithCompletePreviousRequest(BaseRequestOptions<?> options, Request previous) {
     return !options.isMemoryCacheable() && previous.isComplete();
   }

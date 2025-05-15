@@ -175,8 +175,7 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
       }
     }
 
-    // 避免在持有引擎锁的情况下回调，否则调用者更容易
-    // 死锁
+    // 避免在持有引擎锁的情况下回调，否则调用者更容易死锁
     cb.onResourceReady(memoryResource, DataSource.MEMORY_CACHE, /* isLoadedFromAlternateCacheKey= */ false);
     return null;
   }

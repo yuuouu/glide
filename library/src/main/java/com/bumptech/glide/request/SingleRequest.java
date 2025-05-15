@@ -222,8 +222,7 @@ public final class SingleRequest<R> implements Request, SizeReadyCallback, Resou
           width = overrideWidth;
           height = overrideHeight;
         }
-        // Only log at more verbose log levels if the user has set a fallback drawable, because
-        // fallback Drawables indicate the user expects null models occasionally.
+        // 如果用户设置了后备可绘制对象，则仅以更详细的日志级别进行记录，因为后备可绘制对象表明用户偶尔会期望空模型。
         int logLevel = getFallbackDrawable() == null ? Log.WARN : Log.DEBUG;
         onLoadFailed(new GlideException("Received null model"), logLevel);
         return;

@@ -239,15 +239,12 @@ public abstract class ViewTarget<T extends View, Z> extends BaseTarget<Z> {
   }
 
   /**
-   * Returns any stored request using {@link android.view.View#getTag()}.
+   * 使用 {@link android.view.View#getTag()} 返回任何已存储的请求。
    *
-   * <p>For Glide to function correctly, Glide must be the only thing that calls {@link
-   * View#setTag(Object)}. If the tag is cleared or put to another object type, Glide will not be
-   * able to retrieve and cancel previous loads which will not only prevent Glide from reusing
-   * resource, but will also result in incorrect images being loaded and lots of flashing of images
-   * in lists. As a result, this will throw an {@link java.lang.IllegalArgumentException} if {@link
-   * android.view.View#getTag()}} returns a non null object that is not an {@link
-   * com.bumptech.glide.request.Request}.
+   * <p>为了使 Glide 正常运行，Glide 必须是唯一调用 {@link View#setTag(Object)} 的对象。
+   * 如果标签被清除或设置为其他对象类型，Glide 将无法检索和取消之前的加载，这不仅会阻止 Glide 重用资源，还会导致加载错误的图像以及列表中图像的大量闪烁。
+   * 因此，如果 {@link android.view.View#getTag()}} 返回一个非空对象，且该对象不是 {@link com.bumptech.glide.request.Request}，
+   * 则会抛出 {@link java.lang.IllegalArgumentException}。
    */
   @Override
   @Nullable
