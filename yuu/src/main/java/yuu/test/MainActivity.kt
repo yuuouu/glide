@@ -53,10 +53,13 @@ class MainActivity: AppCompatActivity() {
 
     private fun testCache() {
         val imageView = findViewById<ImageView>(R.id.iv)
+        // 获取网络图片
         val KB489 = "https://isorepublic.com/wp-content/uploads/2024/07/iso-republic-night-full-moon.jpg"
+        // 点击后再获取图片，方便打断点
         findViewById<ConstraintLayout>(R.id.main).setOnClickListener {
-            Glide.with(this).load(KB489).skipMemoryCache(false).into(imageView)
+            Glide.with(this).load(KB489).skipMemoryCache(true).into(imageView)
         }
+        // 清除图片缓存，方便再次查看断点
         imageView.setOnClickListener {
             Glide.with(this).clear(imageView)
             CoroutineScope(Dispatchers.IO).launch {

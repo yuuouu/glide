@@ -126,9 +126,8 @@ class SourceGenerator implements DataFetcherGenerator, DataFetcherGenerator.Fetc
     return started;
   }
 
-
   private void startNextLoad(final LoadData<?> toStart) {
-    // 这里是实际加载
+    // 这里是实际加载数据
     loadData.fetcher.loadData(helper.getPriority(), new DataCallback<Object>() {
       @Override
       public void onDataReady(@Nullable Object data) {
@@ -160,7 +159,7 @@ class SourceGenerator implements DataFetcherGenerator, DataFetcherGenerator.Fetc
 
   /**
    * 如果我们能够缓存数据并尝试直接从缓存中解码数据，则返回 {@code true}；
-   * 如果我们无法缓存数据并尝试从源中解码，则返回 {@code false}。
+   * <p>如果我们无法缓存数据并尝试从源中解码，则返回 {@code false}。
    */
   private boolean cacheData(Object dataToCache) throws IOException {
     long startTime = LogTime.getLogTime();
@@ -173,6 +172,7 @@ class SourceGenerator implements DataFetcherGenerator, DataFetcherGenerator.Fetc
       // 查看是否存在数据缓存
       DataCacheKey newOriginalKey = new DataCacheKey(loadData.sourceKey, helper.getSignature());
       DiskCache diskCache = helper.getDiskCache();
+      // 实际写入数据缓存
       diskCache.put(newOriginalKey, writer);
       if (Log.isLoggable(TAG, Log.VERBOSE)) {
         Log.v(TAG, "Finished encoding source to cache" + ", key: " + newOriginalKey + ", data: " + dataToCache + ", encoder: " + encoder + ", duration: "

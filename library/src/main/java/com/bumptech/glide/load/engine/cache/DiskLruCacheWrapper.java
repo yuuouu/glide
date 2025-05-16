@@ -105,10 +105,12 @@ public class DiskLruCacheWrapper implements DiskCache {
     return result;
   }
 
+  /**
+   * 通过加锁、检查缓存是否已存在、协调写入流程、回滚失败，确保 Glide 的磁盘缓存在多线程环境下始终是可靠、一致、且高性能的。
+   */
   @Override
   public void put(Key key, Writer writer) {
-    // We want to make sure that puts block so that data is available when put completes. We may
-    // actually not write any data if we find that data is written by the time we acquire the lock.
+    // 我们希望确保在多线程中 put 操作阻塞，以便在 put 操作完成时数据可用。如果我们在获取锁时发现数据已写入，那么我们实际上可能就不会写入任何数据。
     String safeKey = safeKeyGenerator.getSafeKey(key);
     writeLocker.acquire(safeKey);
     try {
@@ -116,16 +118,17 @@ public class DiskLruCacheWrapper implements DiskCache {
         Log.v(TAG, "Put: Obtained: " + safeKey + " for for Key: " + key);
       }
       try {
-        // We assume we only need to put once, so if data was written while we were trying to get
-        // the lock, we can simply abort.
+        // 我们假设我们只需要放入一次，因此如果在我们尝试获取锁时写入了数据，我们就可以简单地中止。
         DiskLruCache diskCache = getDiskCache();
         Value current = diskCache.get(safeKey);
+        //  二次检查，避免重复写入。即便两个线程几乎同时 put，只要一个先完成，另一个会自动跳过。
         if (current != null) {
           return;
         }
 
         DiskLruCache.Editor editor = diskCache.edit(safeKey);
         if (editor == null) {
+          // 如果 edit 返回 null，说明别的线程已经在写这个 key 了。
           throw new IllegalStateException("Had two simultaneous puts for: " + safeKey);
         }
         try {
@@ -142,6 +145,7 @@ public class DiskLruCacheWrapper implements DiskCache {
         }
       }
     } finally {
+      // 锁释放
       writeLocker.release(safeKey);
     }
   }

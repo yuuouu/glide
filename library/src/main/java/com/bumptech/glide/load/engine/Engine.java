@@ -162,10 +162,10 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
      */
     EngineKey key = keyFactory.buildKey(model, signature, width, height, transformations, resourceClass, transcodeClass, options);
 
-    EngineResource<?> memoryResource = null;
+    EngineResource<?> memoryResource;
     synchronized (this) {
       // 缓存加载图片的入口
-//      memoryResource = loadFromMemory(key, isMemoryCacheable, startTime);
+      memoryResource = loadFromMemory(key, isMemoryCacheable, startTime);
 
       if (memoryResource == null) {
         // 如果缓存为空，则启动一个线程去加载图片

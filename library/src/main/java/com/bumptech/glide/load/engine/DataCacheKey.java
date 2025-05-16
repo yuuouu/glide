@@ -6,7 +6,6 @@ import java.security.MessageDigest;
 
 /** 原始源数据 + 任何请求的签名的缓存键 */
 final class DataCacheKey implements Key {
-
   private final Key sourceKey;
   private final Key signature;
 

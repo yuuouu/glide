@@ -16,7 +16,7 @@ interface DataFetcherGenerator {
    */
   interface FetcherReadyCallback {
 
-    /** Requests that we call startNext() again on a Glide owned thread. */
+    /** 请求我们再次在Glide线程上再次调用startNext()。 */
     void reschedule();
 
     /**

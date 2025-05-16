@@ -51,10 +51,10 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
         }
 
         Key sourceId = cacheKeys.get(sourceIdIndex);
-        Log.e("yuu", "yuu startNext sourceId : " + sourceId.getClass().getCanonicalName());
         // PMD.AvoidInstantiatingObjectsInLoops 循环迭代有限次数，并且它执行的操作比单次分配要昂贵得多。
         @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
         Key originalKey = new DataCacheKey(sourceId, helper.getSignature());
+        Log.e("yuu", "yuu startNext x : " + sourceId.getClass().getCanonicalName() + " originalKey=" + originalKey);
         cacheFile = helper.getDiskCache().get(originalKey);
         if (cacheFile != null) {
           this.sourceKey = sourceId;
