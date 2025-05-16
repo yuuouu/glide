@@ -454,18 +454,21 @@ class DecodeJob<R> implements DataFetcherGenerator.FetcherReadyCallback, Runnabl
     }
   }
 
+  // 检索到有数据可以解码
   private void decodeFromRetrievedData() {
     if (Log.isLoggable(TAG, Log.VERBOSE)) {
       logWithTimeAndKey("Retrieved data", startFetchTime, "data: " + currentData + ", cache key: " + currentSourceKey + ", fetcher: " + currentFetcher);
     }
     Resource<R> resource = null;
     try {
+      // 开始解码数据
       resource = decodeFromData(currentFetcher, currentData, currentDataSource);
     } catch (GlideException e) {
       e.setLoggingDetails(currentAttemptingKey, currentDataSource);
       throwables.add(e);
     }
     if (resource != null) {
+      // 通知编码并发布
       notifyEncodeAndRelease(resource, currentDataSource, isLoadingFromAlternateCacheKey);
     } else {
       runGenerators();

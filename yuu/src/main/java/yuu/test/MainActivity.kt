@@ -57,14 +57,25 @@ class MainActivity: AppCompatActivity() {
         val KB489 = "https://isorepublic.com/wp-content/uploads/2024/07/iso-republic-night-full-moon.jpg"
         // 点击后再获取图片，方便打断点
         findViewById<ConstraintLayout>(R.id.main).setOnClickListener {
-            Glide.with(this).load(KB489).skipMemoryCache(true).into(imageView)
+            Glide.with(this).load(KB489).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.RESOURCE).listener(object : RequestListener<Drawable> {
+                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                    Log.d("GlideCache", "yuu testCache 数据来源：$dataSource")
+                    // 若输出 "RESOURCE_CACHE"，说明命中 ResourceCache
+                    return false
+                }
+
+                override fun onLoadFailed(e: GlideException?, model: Any, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                    Log.e("GlideCache", "yuu testCache 加载失败：${e?.message}")
+                    return false
+                }
+            }).into(imageView)
         }
         // 清除图片缓存，方便再次查看断点
         imageView.setOnClickListener {
             Glide.with(this).clear(imageView)
-            CoroutineScope(Dispatchers.IO).launch {
+            /*CoroutineScope(Dispatchers.IO).launch {
                 Glide.get(applicationContext).clearDiskCache()
-            }
+            }*/
         }
     }
 }

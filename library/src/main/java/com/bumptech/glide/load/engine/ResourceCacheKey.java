@@ -22,15 +22,8 @@ final class ResourceCacheKey implements Key {
   private final Options options;
   private final Transformation<?> transformation;
 
-  ResourceCacheKey(
-      ArrayPool arrayPool,
-      Key sourceKey,
-      Key signature,
-      int width,
-      int height,
-      Transformation<?> appliedTransformation,
-      Class<?> decodedResourceClass,
-      Options options) {
+  ResourceCacheKey(ArrayPool arrayPool, Key sourceKey, Key signature, int width, int height,
+      Transformation<?> appliedTransformation, Class<?> decodedResourceClass, Options options) {
     this.arrayPool = arrayPool;
     this.sourceKey = sourceKey;
     this.signature = signature;
