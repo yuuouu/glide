@@ -8,12 +8,14 @@ import android.graphics.Bitmap;
 import android.os.MessageQueue.IdleHandler;
 import android.util.Log;
 import android.view.View;
+
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+
 import com.bumptech.glide.load.DecodeFormat;
 import com.bumptech.glide.load.engine.Engine;
 import com.bumptech.glide.load.engine.bitmap_recycle.ArrayPool;
@@ -36,6 +38,7 @@ import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.util.GlideSuppliers.GlideSupplier;
 import com.bumptech.glide.util.Preconditions;
 import com.bumptech.glide.util.Util;
+
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -477,6 +480,11 @@ public class Glide implements ComponentCallbacks2 {
   public void clearDiskCache() {
     Util.assertBackgroundThread();
     engine.clearDiskCache();
+  }
+
+  public void removeDiskCache(String url) {
+    Util.assertBackgroundThread();
+    engine.removeDiskCache(url);
   }
 
   /** Internal method. */

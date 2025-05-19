@@ -54,7 +54,7 @@ class DataCacheGenerator implements DataFetcherGenerator, DataFetcher.DataCallba
         // PMD.AvoidInstantiatingObjectsInLoops 循环迭代有限次数，并且它执行的操作比单次分配要昂贵得多。
         @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
         Key originalKey = new DataCacheKey(sourceId, helper.getSignature());
-        Log.e("yuu", "yuu startNext x : " + sourceId.getClass().getCanonicalName() + " originalKey=" + originalKey);
+        Log.e("yuu", "yuu startNext sourceId.Class= : " + sourceId.getClass().getCanonicalName() +" sourceId="+ sourceId+ " originalKey=" + originalKey);
         cacheFile = helper.getDiskCache().get(originalKey);
         if (cacheFile != null) {
           this.sourceKey = sourceId;

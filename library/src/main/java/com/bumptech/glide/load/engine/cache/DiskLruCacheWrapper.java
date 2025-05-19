@@ -171,9 +171,8 @@ public class DiskLruCacheWrapper implements DiskCache {
         Log.w(TAG, "Unable to clear disk cache or disk cache cleared externally", e);
       }
     } finally {
-      // Delete can close the cache but still throw. If we don't null out the disk cache here, every
-      // subsequent request will try to act on a closed disk cache and fail. By nulling out the disk
-      // cache we at least allow for attempts to open the cache in the future. See #2465.
+      // 删除操作可以关闭缓存，但仍然会抛出异常。如果我们不在此处清空磁盘缓存，则后续所有请求都会尝试访问已关闭的磁盘缓存并失败。
+      // 通过清空磁盘缓存，我们至少可以允许将来尝试打开缓存。参见 #2465。
       resetDiskCache();
     }
   }

@@ -1,11 +1,13 @@
 package com.bumptech.glide.load.engine;
 
 import android.util.Log;
+
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.util.Pools;
+
 import com.bumptech.glide.GlideContext;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.DataSource;
@@ -17,12 +19,16 @@ import com.bumptech.glide.load.engine.cache.DiskCache;
 import com.bumptech.glide.load.engine.cache.DiskCacheAdapter;
 import com.bumptech.glide.load.engine.cache.MemoryCache;
 import com.bumptech.glide.load.engine.executor.GlideExecutor;
+import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.request.ResourceCallback;
+import com.bumptech.glide.signature.EmptySignature;
 import com.bumptech.glide.util.Executors;
 import com.bumptech.glide.util.LogTime;
 import com.bumptech.glide.util.Preconditions;
 import com.bumptech.glide.util.Synthetic;
 import com.bumptech.glide.util.pool.FactoryPools;
+
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -316,6 +322,22 @@ public class Engine implements EngineJobListener, MemoryCache.ResourceRemovedLis
 
   public void clearDiskCache() {
     diskCacheProvider.getDiskCache().clear();
+  }
+
+  public void removeDiskCache(String url) {
+    try {
+      GlideUrl glideUrl = new GlideUrl(url);
+      Key key = new DataCacheKey(glideUrl, EmptySignature.obtain());
+      DiskCache diskCache = diskCacheProvider.getDiskCache();
+      // 删除前检查
+      File cacheFile = diskCache.get(key);
+      boolean existedBefore = cacheFile != null && cacheFile.exists();
+      diskCacheProvider.getDiskCache().delete(key);
+      boolean existedAfter = cacheFile != null && cacheFile.exists();
+      Log.d("DiskCache", "yuu removeDiskCache url: " + url + " 之前存在: " + existedBefore + " 之后存在: " + existedAfter);
+    } catch (Exception e) {
+      Log.e("DiskCache", "yuu 删除缓存失败: " + url, e);
+    }
   }
 
   @VisibleForTesting

@@ -1,8 +1,6 @@
 package yuu.test
 
 import android.annotation.SuppressLint
-import android.content.Intent
-import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
@@ -15,7 +13,6 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,25 +54,15 @@ class MainActivity: AppCompatActivity() {
         val KB489 = "https://isorepublic.com/wp-content/uploads/2024/07/iso-republic-night-full-moon.jpg"
         // 点击后再获取图片，方便打断点
         findViewById<ConstraintLayout>(R.id.main).setOnClickListener {
-            Glide.with(this).load(KB489).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.RESOURCE).listener(object : RequestListener<Drawable> {
-                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                    Log.d("GlideCache", "yuu testCache 数据来源：$dataSource")
-                    // 若输出 "RESOURCE_CACHE"，说明命中 ResourceCache
-                    return false
-                }
-
-                override fun onLoadFailed(e: GlideException?, model: Any, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                    Log.e("GlideCache", "yuu testCache 加载失败：${e?.message}")
-                    return false
-                }
-            }).into(imageView)
+            Glide.with(this).load(KB489).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.DATA).into(imageView)
         }
         // 清除图片缓存，方便再次查看断点
         imageView.setOnClickListener {
             Glide.with(this).clear(imageView)
-            /*CoroutineScope(Dispatchers.IO).launch {
-                Glide.get(applicationContext).clearDiskCache()
-            }*/
+            CoroutineScope(Dispatchers.IO).launch {
+//                Glide.get(applicationContext).clearDiskCache()
+                Glide.get(applicationContext).removeDiskCache(KB489)
+            }
         }
     }
 }
