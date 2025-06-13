@@ -559,6 +559,8 @@ public class Glide implements ComponentCallbacks2 {
    * @deprecated This is equivalent to calling {@link #with(Context)} using the application context.
    *     Use the androidx Activity class instead (ie {@link FragmentActivity}, or {@link
    *     androidx.appcompat.app.AppCompatActivity}).
+   * @throws IllegalArgumentException if the activity associated with the Glide request is being
+   *     destroyed.
    */
   @NonNull
   @Deprecated
@@ -571,8 +573,9 @@ public class Glide implements ComponentCallbacks2 {
    * androidx.fragment.app.FragmentActivity}'s lifecycle and that uses the given {@link
    * androidx.fragment.app.FragmentActivity}'s default options.
    *
-   * @param activity The activity to use.
+   * @param activity The activity to use. The activity must not be destroyed.
    * @return A RequestManager for the given FragmentActivity that can be used to start a load.
+   * @throws IllegalArgumentException if the activity is being destroyed.
    */
   @NonNull
   public static RequestManager with(@NonNull FragmentActivity activity) {
@@ -585,6 +588,7 @@ public class Glide implements ComponentCallbacks2 {
    *
    * @param fragment The fragment to use.
    * @return A RequestManager for the given Fragment that can be used to start a load.
+   * @throws IllegalArgumentException if the activity associated with the fragment is destroyed.
    */
   @NonNull
   public static RequestManager with(@NonNull Fragment fragment) {
@@ -600,6 +604,7 @@ public class Glide implements ComponentCallbacks2 {
    * @deprecated This method is identical to calling {@link Glide#with(Context)} using the
    *     application context. Prefer support Fragments and {@link #with(Fragment)} instead. See
    *     https://github.com/android/android-ktx/pull/161#issuecomment-363270555.
+   * @throws IllegalArgumentException if the activity associated with the fragment is destroyed.
    */
   @Deprecated
   @NonNull
@@ -633,6 +638,7 @@ public class Glide implements ComponentCallbacks2 {
    *
    * @param view The view to search for a containing Fragment or Activity from.
    * @return A RequestManager that can be used to start a load.
+   * @throws IllegalArgumentException if the activity associated with the view is destroyed.
    */
   @NonNull
   public static RequestManager with(@NonNull View view) {
