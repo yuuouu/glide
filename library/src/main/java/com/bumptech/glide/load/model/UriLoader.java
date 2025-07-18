@@ -67,14 +67,24 @@ public class UriLoader<Data> implements ModelLoader<Uri, Data> {
       implements ModelLoaderFactory<Uri, InputStream>, LocalUriFetcherFactory<InputStream> {
 
     private final ContentResolver contentResolver;
+    private final boolean useMediaStoreApisIfAvailable;
 
     public StreamFactory(ContentResolver contentResolver) {
+      this(contentResolver, /* useMediaStoreApisIfAvailable */ false);
+    }
+
+    /**
+     * useMediaStoreApisIfAvailable is part of an experiment and the constructor can be removed in a
+     * future version.
+     */
+    public StreamFactory(ContentResolver contentResolver, boolean useMediaStoreApisIfAvailable) {
       this.contentResolver = contentResolver;
+      this.useMediaStoreApisIfAvailable = useMediaStoreApisIfAvailable;
     }
 
     @Override
     public DataFetcher<InputStream> build(Uri uri) {
-      return new StreamLocalUriFetcher(contentResolver, uri);
+      return new StreamLocalUriFetcher(contentResolver, uri, useMediaStoreApisIfAvailable);
     }
 
     @NonNull
@@ -95,14 +105,25 @@ public class UriLoader<Data> implements ModelLoader<Uri, Data> {
           LocalUriFetcherFactory<ParcelFileDescriptor> {
 
     private final ContentResolver contentResolver;
+    private final boolean useMediaStoreApisIfAvailable;
 
     public FileDescriptorFactory(ContentResolver contentResolver) {
+      this(contentResolver, /* useMediaStoreApisIfAvailable */ false);
+    }
+
+    /**
+     * useMediaStoreApisIfAvailable is part of an experiment and the constructor can be removed in a
+     * future version.
+     */
+    public FileDescriptorFactory(
+        ContentResolver contentResolver, boolean useMediaStoreApisIfAvailable) {
       this.contentResolver = contentResolver;
+      this.useMediaStoreApisIfAvailable = useMediaStoreApisIfAvailable;
     }
 
     @Override
     public DataFetcher<ParcelFileDescriptor> build(Uri uri) {
-      return new FileDescriptorLocalUriFetcher(contentResolver, uri);
+      return new FileDescriptorLocalUriFetcher(contentResolver, uri, useMediaStoreApisIfAvailable);
     }
 
     @NonNull
@@ -123,9 +144,20 @@ public class UriLoader<Data> implements ModelLoader<Uri, Data> {
           LocalUriFetcherFactory<AssetFileDescriptor> {
 
     private final ContentResolver contentResolver;
+    private final boolean useMediaStoreApisIfAvailable;
 
     public AssetFileDescriptorFactory(ContentResolver contentResolver) {
+      this(contentResolver, /* useMediaStoreApisIfAvailable */ false);
+    }
+
+    /**
+     * useMediaStoreApisIfAvailable is part of an experiment and the constructor can be removed in a
+     * future version.
+     */
+    public AssetFileDescriptorFactory(
+        ContentResolver contentResolver, boolean useMediaStoreApisIfAvailable) {
       this.contentResolver = contentResolver;
+      this.useMediaStoreApisIfAvailable = useMediaStoreApisIfAvailable;
     }
 
     @Override
@@ -140,7 +172,8 @@ public class UriLoader<Data> implements ModelLoader<Uri, Data> {
 
     @Override
     public DataFetcher<AssetFileDescriptor> build(Uri uri) {
-      return new AssetFileDescriptorLocalUriFetcher(contentResolver, uri);
+      return new AssetFileDescriptorLocalUriFetcher(
+          contentResolver, uri, useMediaStoreApisIfAvailable);
     }
   }
 }
